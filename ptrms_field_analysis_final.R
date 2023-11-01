@@ -81,7 +81,10 @@ Data_PTRMS_outdoorx=NULL
    
  }
  
- 
+ ## stop here 
+
+
+
  ###
  matt_max_bck <- matt_max_bck[!(matt_max_bck$Group.2 == 29),]
  ########## heat map 
