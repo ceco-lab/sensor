@@ -21,79 +21,63 @@ myColorRamp <- function(colors, values) {
 
 setwd("./data")
 
-Data_ted <- read.csv("Data_field_PTRMS.csv",sep=",")
+Data_PTRMS_outdoor <- read.csv("Data_field_PTRMS.csv",sep=",")
 
 
-
-p <- ggplot(Data_ted, aes(Treatment,C3H5O.))
-p + geom_boxplot()
-
-#### xgboost calssification 
- 
-#vec_date_unique <- unique(Data_ted$Tech_replicate)
-
- Data_ted2 <-  Data_ted[-grep("leaf_wounded",Data_ted$Plant_part),]
- Data_ted2 <-  Data_ted2[-grep("whorle",Data_ted2$Plant_part),]
-
-
-
- vec_date <- as.Date(Data_ted2$Date, format = "%m/%d/%y")
+ vec_date <- as.Date(Data_PTRMS_outdoor$Date, format = "%m/%d/%y")
  vec_date_unique <- unique(vec_date)
  
 
- p <- ggplot(Data_ted2, aes(Treatment,C3H5O.))
- p + geom_boxplot()
 
  
- 
  #### loop sec 
- 
- Sample_ID <- unique(Data_ted2$Sample_ID)
- Data_ted2x=NULL
+### ad chrono in sec 
+Sample_ID <- unique(Data_PTRMS_outdoor$Sample_ID)
+Data_PTRMS_outdoorx=NULL
  
  for (i in c(1:length(Sample_ID))) {
    
    
-   Data_tedx <- Data_ted2[Data_ted2$Sample_ID == Sample_ID[i],]
-   Data_tedx$chrono <- c(1:nrow(Data_tedx))
-   Data_tedx <- Data_tedx[,c(1:7,ncol(Data_tedx),(8):(ncol(Data_tedx)-1))]
+   Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoor[Data_PTRMS_outdoor$Sample_ID == Sample_ID[i],]
+   Data_PTRMS_outdoorx_inter$chrono <- c(1:nrow(Data_PTRMS_outdoorx_inter))
+   Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[,c(1:7,ncol(Data_PTRMS_outdoorx_inter),(8):(ncol(Data_PTRMS_outdoorx_inter)-1))]
    
-   Data_ted2x <- rbind(Data_ted2x,Data_tedx)
+   Data_PTRMS_outdoorx <- rbind(Data_PTRMS_outdoorx,Data_PTRMS_outdoorx_inter)
    
  }
  
  
  
- 
- matt_max_bck = NULL
+ ##### substract background
+ matt_quant_bck = NULL
  
  for (j in c(1:length(vec_date_unique))) {
    
    
-   Data_ted1 <- Data_ted2x[vec_date == vec_date_unique[j],]
-   Data_ted1 <- Data_ted1[Data_ted1$chrono <26,]
+   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx[vec_date == vec_date_unique[j],]
+   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx1[Data_PTRMS_outdoorx1$chrono <26,]
    
-   matt_max<-   data.frame(aggregate(Data_ted1[,9:36],
-                                     by = list(Data_ted1$Treatment,Data_ted1$Plant), # Data_ted1$Plant
-                                     FUN = function(x) quantile(x, probs = 0.9))) # function(x) quantile(x, probs = 0.95)
+   matt_quant <-   data.frame(aggregate(Data_PTRMS_outdoorx1[,9:36],
+                                     by = list(Data_PTRMS_outdoorx1$Treatment,Data_PTRMS_outdoorx1$Plant), # 
+                                     FUN = function(x) quantile(x, probs = 0.9))) # 
    
-   background <- matt_max[matt_max$Group.1 == "background",] 
+   background <- matt_quant[matt_quant$Group.1 == "background",] 
    
-   matt_max <- matt_max[!(matt_max$Group.1 == "background"),] 
+   matt_quant <- matt_quant[!(matt_quant$Group.1 == "background"),] 
    
-   matt_max2 <- matt_max
+   matt_quant2 <- matt_quant
    
-   for ( i in c(3:ncol(matt_max2))) { 
+   for ( i in c(3:ncol(matt_quant2))) { 
      
-     matt_max2[,i] <- matt_max2[,i] - background[nrow(background),i]
+     matt_quant2[,i] <- matt_quant2[,i] - background[nrow(background),i]
      
    }
    
-   date <- rep(j,nrow(matt_max2))
+   date <- rep(j,nrow(matt_quant2))
    
-   matt_max2 <- data.frame(date,matt_max2)
+   matt_quant2 <- data.frame(date,matt_quant2)
    
-   matt_max_bck <- rbind(matt_max_bck,matt_max2)
+   matt_quant_bck <- rbind(matt_quant_bck,matt_quant2)
    
  }
  
