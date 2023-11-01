@@ -21,15 +21,8 @@ myColorRamp <- function(colors, values) {
 
 setwd("./data")
 
-Data_ted <- read.csv("Data_25_sec_field_corrected.csv",sep=",")
+Data_ted <- read.csv("Data_field_PTRMS.csv",sep=",")
 
-
-
-### SELCTED ORGAN 
-#Data_ted_bck <- Data_ted[grep("#N/A",Data_ted$Plant_part) ,]
-#Data_ted_org<- Data_ted[grep("systemic",Data_ted$Plant_part),]
-
-#Data_ted <- rbind(Data_ted_bck,Data_ted_org)
 
 
 p <- ggplot(Data_ted, aes(Treatment,C3H5O.))
@@ -41,18 +34,7 @@ p + geom_boxplot()
 
  Data_ted2 <-  Data_ted[-grep("leaf_wounded",Data_ted$Plant_part),]
  Data_ted2 <-  Data_ted2[-grep("whorle",Data_ted2$Plant_part),]
- #???Data_ted2 <-  Data_ted2[-grep("T2S2",Data_ted2$Sample_ID),]
- #Data_ted2 <-  Data_ted2[-grep("T3S2",Data_ted2$Sample_ID),]
- #Data_ted2 <-  Data_ted2[-grep("T2S3",Data_ted2$Sample_ID),]
- #Data_ted2 <-  Data_ted2[-grep("T4S1",Data_ted2$Sample_ID),]
- #Data_ted2 <-  Data_ted2[-grep("T28S2",Data_ted2$Sample_ID),]
- #Data_ted2 <-  Data_ted2[grep(1,Data_ted2$Repetition_measurment),]
- 
- #Data_ted2 <-  Data_ted2[-grep("leaf_systemic",Data_ted2$),]
- 
- #Data_ted2 <-  Data_ted2[-grep("leaf_systemic",Data_ted2$Plant_part),]
- #Data_ted2 <-  Data_ted2[grep(1,Data_ted2$Repetition_measurment),]
- #Data_ted2 <-  Data_ted
+
 
 
  vec_date <- as.Date(Data_ted2$Date, format = "%m/%d/%y")
