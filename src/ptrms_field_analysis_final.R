@@ -120,29 +120,29 @@ p + geom_boxplot()
  matt_max_bck <- matt_max_bck[!(matt_max_bck$Group.2 == 29),]
  ########## heat map 
  
- matt_max_bck_stat <- matt_max_bck
+ matt_max_quant_stat <- matt_max_bck
 
 #matt_max_bck <-  matt_max_bck[grep(1,matt_max_bck$Repetition_measurment),]
  
  ########## heat map 
  
- matt_max_bck_stat <- matt_max_bck
- matt_max_bck_stat$sample <- paste(matt_max_bck_stat$Group.1,matt_max_bck_stat$Group.2)
- colnames(matt_max_bck_stat)[2] <- "treatment"
- matt_max_x  <-matt_max_bck_stat[,4:(ncol(matt_max_bck_stat)-1)]
- row.names(matt_max_x) <- matt_max_bck_stat$sample
+ matt_max_quant_stat <- matt_max_bck
+ matt_max_quant_stat$sample <- paste(matt_max_quant_stat$Group.1,matt_max_quant_stat$Group.2)
+ colnames(matt_max_quant_stat)[2] <- "treatment"
+ matt_quant_x  <-matt_max_quant_stat[,4:(ncol(matt_max_quant_stat)-1)]
+ row.names(matt_quant_x) <- matt_max_quant_stat$sample
  #GCMS_delprim <- GCMS_delprim[,c(1,2,16,21)]
- matt_max_x[matt_max_x < 0] <- 0
+ matt_quant_x[matt_quant_x < 0] <- 0
 
-d_matt_max_x<- vegdist(matt_max_x,method="bray") # method="man" # is a bit better
-hc_matt_max_x<- hclust(d_matt_max_x, method = "complete")
-matt_max_treatment <- rev(levels(as.factor(matt_max_bck_stat$treatment)))
+d_matt_quant_x<- vegdist(matt_quant_x,method="bray") # method="man" # is a bit better
+hc_matt_quant_x<- hclust(d_matt_quant_x, method = "complete")
+matt_quant_treatment <- rev(levels(as.factor(matt_max_quant_stat$treatment)))
 
-dend <- as.phylo(hc_matt_max_x)
+dend <- as.phylo(hc_matt_quant_x)
 # order it the closest we can to the order of the observations:
 
 
-g2 <- split(as.factor(matt_max_bck_stat$sample), as.factor(matt_max_bck_stat$treatment))
+g2 <- split(as.factor(matt_max_quant_stat$sample), as.factor(matt_max_quant_stat$treatment))
 tree_plot2 <- groupOTU(dend, g2)
 
 cols <- c("khaki","darkred")
@@ -152,12 +152,12 @@ circ <- ggtree(tree_plot2, aes(fill=group),size=1)+ #,layout='circular'
   geom_tiplab(size=2, offset=0.08)  +
   scale_color_manual(values=cols) + theme(legend.position="none")
 
-df <- data.frame(matt_max_bck_stat$treatment)
+df <- data.frame(matt_max_quant_stat$treatment)
 
 rownames(df) <- tree_plot2$tip.label
 
 
-ggheat_plot<-gheatmap(circ, df[, "matt_max_bck_stat.treatment", drop=F], offset=0, width=0.1,colnames = FALSE,
+ggheat_plot<-gheatmap(circ, df[, "matt_max_quant_stat.treatment", drop=F], offset=0, width=0.1,colnames = FALSE,
                       colnames_angle=90, colnames_offset_y = 0) + scale_fill_manual(values=cols)
 
 ggheat_plot
@@ -170,20 +170,20 @@ ggheat_plot
 cols2 <- cols#sample(hcl.colors(10, "Vik"))
 
 
-nmds <- metaMDS(matt_max_x,distance="gower")
+nmds <- metaMDS(matt_quant_x,distance="gower")
 
 
 matt_plot_nmds<- vegan::scores(nmds) %>%
-  cbind(matt_max_bck_stat) 
+  cbind(matt_max_quant_stat) 
 matt_plot_nmds <- matt_plot_nmds[-40,]
 
 
-pcoa <- cmdscale(d_matt_max_x,k=2)
+pcoa <- cmdscale(d_matt_quant_x,k=2)
 colnames(pcoa) <- c("NMDS1","NMDS2")
 
 
   matt_plot_nmds<- pcoa %>%
-  cbind(matt_max_bck_stat) 
+  cbind(matt_max_quant_stat) 
 matt_plot_nmds <- matt_plot_nmds[-40,]
 
 
@@ -207,19 +207,19 @@ matt_plot_nmds <- matt_plot_nmds[-40,]
   
   ### data supervizer
   
-  matt_max_bck_stat_rf<-matt_max_bck_stat[,4:(ncol(matt_max_bck_stat)-1)]
+  matt_max_quant_stat_rf<-matt_max_quant_stat[,4:(ncol(matt_max_quant_stat)-1)]
   #GCMS_delprim_rf <- GCMS_delprim_rf[,c(1,10,8)]
-  matt_max_bck_stat_rf$treatment <- as.factor(matt_max_bck_stat$treatment)
+  matt_max_quant_stat_rf$treatment <- as.factor(matt_max_quant_stat$treatment)
   
   
   
   ##################### plsda 
   
-  liney <- MASS::lda(treatment~., data = matt_max_bck_stat_rf)
-  result <- predict(liney, matt_max_bck_stat_rf)
-  lhat <- 1 - sum(result$class == matt_max_bck_stat_rf$treatment)/length(matt_max_bck_stat_rf$treatment)
+  liney <- MASS::lda(treatment~., data = matt_max_quant_stat_rf)
+  result <- predict(liney, matt_max_quant_stat_rf)
+  lhat <- 1 - sum(result$class == matt_max_quant_stat_rf$treatment)/length(matt_max_quant_stat_rf$treatment)
   
-  data <- data.frame(x1=result$x[,1], y=matt_max_bck_stat_rf$treatment)
+  data <- data.frame(x1=result$x[,1], y=matt_max_quant_stat_rf$treatment)
   data$y <- factor(data$y)
   LDA <- ggplot(data, aes(x=x1, fill=y)) +
     geom_density(adjust=5, alpha=0.6) +
@@ -234,9 +234,9 @@ matt_plot_nmds <- matt_plot_nmds[-40,]
 ##################rf 
   
   
-  model_1 = randomForest(treatment~., data = matt_max_bck_stat_rf, importance = TRUE,ntree=10000)
+  model_1 = randomForest(treatment~., data = matt_max_quant_stat_rf, importance = TRUE,ntree=10000)
   
-  ozone.rp <- rfPermute(treatment ~ ., data = matt_max_bck_stat_rf, na.action = na.omit, ntree = 1000, num.rep = 150)
+  ozone.rp <- rfPermute(treatment ~ ., data = matt_max_quant_stat_rf, na.action = na.omit, ntree = 1000, num.rep = 150)
   var_imp <-  plotImportance(ozone.rp, scale = TRUE,size = 3)
   
   
