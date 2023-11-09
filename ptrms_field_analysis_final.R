@@ -21,12 +21,13 @@ vec_date_unique <- unique(vec_date)
 # Get unique sample IDs
 Sample_ID <- unique(Data_PTRMS_outdoor$Sample_ID)
 
+
 # Initialize empty data frame
 Data_PTRMS_outdoorx <- NULL
 
-# Build time column
+# Build time column for each sample
 for (i in c(1:length(Sample_ID))) {
-    # Subset data for each sample ID
+  # Subset data for each sample ID
   Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoor[Data_PTRMS_outdoor$Sample_ID == Sample_ID[i], ]
   # Create a chronological column
   Data_PTRMS_outdoorx_inter$chrono <- c(1:nrow(Data_PTRMS_outdoorx_inter))
@@ -36,16 +37,16 @@ for (i in c(1:length(Sample_ID))) {
   Data_PTRMS_outdoorx <- rbind(Data_PTRMS_outdoorx, Data_PTRMS_outdoorx_inter)
 }
 
-# Initialize empty data frame for storing results
+
+# Calculate 90th percentile for each sample and background by date and remove background
 matt_quant_bck <- NULL
 
-# Subtract background, calculate 90th percentile by day
 for (j in c(1:length(vec_date_unique))) {
-    # Subset data for each unique date
+  # Subset data for each unique date
   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx[vec_date == vec_date_unique[j], ]
-    # Ensure measurement time is 25 sec
+  # Ensure measurement time is 25 sec
   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx1[Data_PTRMS_outdoorx1$chrono < 26, ]
-    # Calculate 90th percentile for each group
+  # Calculate 90th percentile for each group
   matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 7:34],
     by = list(Data_PTRMS_outdoorx1$Treatment, Data_PTRMS_outdoorx1$Plant), #
     FUN = function(x) quantile(x, probs = 0.9)
