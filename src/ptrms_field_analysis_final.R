@@ -63,7 +63,6 @@ for (j in c(1:length(vec_date_unique))) {
   # Copy data for modification
   matt_quant2 <- matt_quant
 
-  matt_quant2 <- subset(matt_quant2, !(Group.2 == 29))
   # Subtract background values
   for (i in c(3:ncol(matt_quant2))) {
     matt_quant2[, i] <- matt_quant2[, i] - background[nrow(background), i]
