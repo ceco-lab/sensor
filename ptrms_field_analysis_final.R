@@ -118,7 +118,7 @@ nmds_plot <- ggplot(data = matt_plot_nmds, aes(x = sites.NMDS1, y = sites.NMDS2)
 nmds_plot
 
 # PERMANOVA analysis
-adonis2(matt_quant_x ~ matt_quant_stat$treatment, permutations = 999, method = "gower")
+ado <- adonis2(matt_quant_x ~ matt_quant_stat$treatment, permutations = 999, method = "gower")
 
 # Prepare data for Random Forest analysis
 # Select input variables
@@ -132,25 +132,13 @@ rp <- rfPermute(treatment ~ ., data = matt_quant_stat_rf, na.action = na.omit, n
 # Plot variable importance
 var_imp <- plotImportance(rp, scale = TRUE, size = 3)
 
-# Redirect summary output to a file and read it into a character vector
-sink("table.txt")
-print(summary(rp))
-sink()
-Rr_perm <- readLines("table.txt")
-Rr_perm <- Rr_perm[-length(Rr_perm)]
+# print output
 
-# save plots and RF summary into a PDF
-pdf("PTRMS_outdoor.pdf")
+ado
+
+rp
+
 title <- "PTRMS field result"
 grid::grid.text(title, x = (0.5), y = (0.6))
 nmds_plot
 plotImportance(rp, scale = TRUE, size = 3)
-
-par(mar = c(0.1, 1, 1, 0.1))
-plot(x = c(1, 21), y = c(1, 29.7), type = "n", axes = FALSE, frame.plot = FALSE, xlab = "", ylab = "")
-liner <- rev(seq(1, 29, 0.4))
-
-for (i in c(1:length(Rr_perm))) {
-  text(x = 0, y = liner[i], labels = Rr_perm[i], cex = 0.5, pos = 4)
-}
-dev.off()
