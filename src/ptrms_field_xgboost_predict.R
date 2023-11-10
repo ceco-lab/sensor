@@ -1,198 +1,134 @@
-library(xgboost)
-library(caret)
-library(rpart)
-library(sp)
-library(rayshader)
-library(rgl)
-library(readobj)
+# Load libraries
 library(vegan)
 library(rfPermute)
-library(randomForest)
-library(ggalt)
-library(ggplot)
+library(ggplot2)
 library(dplyr)
+library(ape)
+library(ggalt)
+
+# Set working directory
+setwd("./data")
+
+# Set seed for reproducibility
+set.seed(6)
+
+# Load data
+
+Data_PTRMS_outdoor <- read.csv("Data.csv", sep = ";")
+Data_PTRMS_outdoor$Repetition_measurment[Data_PTRMS_outdoor$Treatment=="background"] <- 0
+
+# Convert date to Date format and get unique dates
+vec_date <- as.Date(Data_PTRMS_outdoor$Date, format = "%m/%d/%y")
+vec_date_unique <- unique(vec_date)
+
+# Get unique sample IDs
+Sample_ID <- unique(Data_PTRMS_outdoor$Sample_ID)
 
 
-myColorRamp <- function(colors, values) { 
-  v <- (values - min(values))/diff(range(values)) 
-  x <- colorRamp(colors)(v) 
-  rgb(x[,1], x[,2], x[,3], maxColorValue = 255) 
-} 
+# Initialize empty data frame
+Data_PTRMS_outdoorx <- NULL
 
-setwd("G:/My Drive/taf/postdoc neuchatel/ted_turling/ERC/PTR-MS field data")
+# Build time column for each sample
+for (i in c(1:length(Sample_ID))) {
+  # Subset data for each sample ID
+  Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoor[Data_PTRMS_outdoor$Sample_ID == Sample_ID[i], ]
+  # Create a chronological column
+  Data_PTRMS_outdoorx_inter$chrono <- c(1:nrow(Data_PTRMS_outdoorx_inter))
+  # Reorder columns
+  Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:5, ncol(Data_PTRMS_outdoorx_inter), (6):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
+  # Append to the main data frame
+  Data_PTRMS_outdoorx <- rbind(Data_PTRMS_outdoorx, Data_PTRMS_outdoorx_inter)
+}
 
-Data_ted <- read.csv("Data_25_sec_field_corrected.csv",sep=",")
+#Initialize empty data frame 
+matt_quant_bck <- NULL
+# Calculate 90th percentile for each sample and background by date and remove background
+for (j in c(1:length(vec_date_unique))) {
+  # Subset data for each unique date
+  Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx[vec_date == vec_date_unique[j], ]
+  # Ensure measurement time is 25 sec
+  Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx1[Data_PTRMS_outdoorx1$chrono < 26, ]
+  # Calculate 90th percentile for each group
+  matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 7:34],
+    by = list(Data_PTRMS_outdoorx1$Treatment, Data_PTRMS_outdoorx1$Plant,Data_PTRMS_outdoorx1$Repetition_measurment),
+    FUN = function(x) quantile(x, probs = 0.9)
+  ))
 
 
 
-### SELCTED ORGAN 
-#Data_ted_bck <- Data_ted[grep("#N/A",Data_ted$Plant_part) ,]
-#Data_ted_org<- Data_ted[grep("systemic",Data_ted$Plant_part),]
+  Data_PTRMS_outdoorx1$Plant
+  unique(matt_quant$Group.1)
+  # Separate background data
+  background <- matt_quant[matt_quant$Group.1 == "background", ]
+  background
+  # Remove background data from main data
+  matt_quant <- matt_quant[!(matt_quant$Group.1 == "background"), ]
 
-#Data_ted <- rbind(Data_ted_bck,Data_ted_org)
+  # Copy data for modification
+  matt_quant2 <- matt_quant
 
+  matt_quant2 <- subset(matt_quant2, !(Group.2 == 29))
+  # Subtract background values
+  for (i in c(3:ncol(matt_quant2))) {
+    matt_quant2[, i] <- matt_quant2[, i] - background[nrow(background), i]
+  }
+  # Add date column
+  date <- rep(j, nrow(matt_quant2))
+  matt_quant2 <- data.frame(date, matt_quant2)
 
-p <- ggplot(Data_ted, aes(Treatment,C3H5O.))
-p + geom_boxplot()
+  # Append to the main results data frame
+  matt_quant_bck <- rbind(matt_quant_bck, matt_quant2)
+}
+## loop stops here
+colnames(matt_quant_bck)[colnames(matt_quant_bck) == "Group.3"]  <- "Repetition_measurment"
 
-#### xgboost calssification 
- 
-#vec_date_unique <- unique(Data_ted$Tech_replicate)
-Data_ted2 <-  Data_ted[-grep("leaf_wounded",Data_ted$Plant_part),]
-Data_ted2 <-  Data_ted2[-grep("whorle",Data_ted2$Plant_part),]
-#Data_ted2 <-  Data_ted2[-grep("T2S2",Data_ted2$Sample_ID),]
-#Data_ted2 <-  Data_ted2[-grep("T3S2",Data_ted2$Sample_ID),]
-#Data_ted2 <-  Data_ted2[-grep("T2S3",Data_ted2$Sample_ID),]
-#Data_ted2 <-  Data_ted2[-grep("T4S1",Data_ted2$Sample_ID),]
-#Data_ted2 <-  Data_ted2[-grep("T28S2",Data_ted2$Sample_ID),]
 
 vec_comb <- c("all","1","2","3","1_2","1_3","2_3")
 output_conf_mat <- list()
 
-for ( xx in c(1:length(vec_comb))) {
+for (xx in c(1:length(vec_comb))) {
 
 slelector <- vec_comb[xx]
 
-if(slelector == "all") {Data_ted2 <- Data_ted2}
-if(slelector == "1") {Data_ted2 <-  Data_ted2[grep(1,Data_ted2$Repetition_measurment),]}
-if(slelector == "2") {Data_ted2 <-  Data_ted2[grep(2,Data_ted2$Repetition_measurment),]}
-if(slelector == "3") {Data_ted2 <-  Data_ted2[grep(3,Data_ted2$Repetition_measurment),]}
-if(slelector == "1_2") {Data_ted2 <-  Data_ted2[-grep(3,Data_ted2$Repetition_measurment),]}
-if(slelector == "1_3") {Data_ted2 <-  Data_ted2[-grep(2,Data_ted2$Repetition_measurment),]}
-if(slelector == "2_3") {Data_ted2 <-  Data_ted2[-grep(1,Data_ted2$Repetition_measurment),]}
- 
- #Data_ted2 <-  Data_ted2[-grep("leaf_systemic",Data_ted2$),]
- 
- #Data_ted2 <-  Data_ted2[-grep("leaf_systemic",Data_ted2$Plant_part),]
- #Data_ted2 <-  Data_ted2[grep(1,Data_ted2$Repetition_measurment),]
- #Data_ted2 <-  Data_ted
+if(slelector == "all") {matt_quant_bck_inter <- matt_quant_bck}
+if(slelector == "1") {matt_quant_bck_inter <-  matt_quant_bck[grep(1,matt_quant_bck$Repetition_measurment),]}
+if(slelector == "2") {matt_quant_bck_inter <-  matt_quant_bck[grep(2,matt_quant_bck$Repetition_measurment),]}
+if(slelector == "3") {matt_quant_bck_inter <-  matt_quant_bck[grep(3,matt_quant_bck$Repetition_measurment),]}
+if(slelector == "1_2") {matt_quant_bck_inter <-  matt_quant_bck[-grep(3,matt_quant_bck$Repetition_measurment),]}
+if(slelector == "1_3") {matt_quant_bck_inter <-  matt_quant_bck[-grep(2,matt_quant_bck$Repetition_measurment),]}
+if(slelector == "2_3") {matt_quant_bck_inter <-  matt_quant_bck[-grep(1,matt_quant_bck$Repetition_measurment),]}
 
 
- vec_date <- as.Date(Data_ted2$Date, format = "%m/%d/%y")
- vec_date_unique <- unique(vec_date)
- 
-
- p <- ggplot(Data_ted2, aes(Treatment,C3H5O.))
- p + geom_boxplot()
-
- 
-#### loop sec 
- 
- Sample_ID <- unique(Data_ted2$Sample_ID)
- Data_ted2x=NULL
- 
- for (i in c(1:length(Sample_ID))) {
-   
-   
-   Data_tedx <- Data_ted2[Data_ted2$Sample_ID == Sample_ID[i],]
-   Data_tedx$chrono <- c(1:nrow(Data_tedx))
-   Data_tedx <- Data_tedx[,c(1:7,ncol(Data_tedx),(8):(ncol(Data_tedx)-1))]
-   
-   Data_ted2x <- rbind(Data_ted2x,Data_tedx)
- 
- }
- 
- 
- 
- matt_max_bck_full = NULL
- 
- for (j in c(1:length(vec_date_unique))) {
- 
- 
-Data_ted1 <- Data_ted2x[vec_date == vec_date_unique[j],]
-Data_ted1 <- Data_ted1[Data_ted1$chrono <26,]
-
-matt_max_sp<-   data.frame(aggregate(Data_ted1[,c(6,9:36)],
-                             by = list(Data_ted1$Treatment,Data_ted1$Plant), # ,Data_ted1$Sampling_order_within_day
-                             FUN = function(x) quantile(x, probs = 0.9))) # function(x) quantile(x, probs = 0.95)
-
-matt_max_bckgr<-   data.frame(aggregate(Data_ted1[,c(6,9:36)],
-                                     by = list(Data_ted1$Treatment,Data_ted1$Plant), # ,Data_ted1$Sampling_order_within_day
-                                     FUN = function(x) quantile(x, probs = 0.9))) # function(x) quantile(x, probs = 0.95)
-
-
-matt_max_bck <- matt_max_bckgr[(matt_max_bckgr$Group.1 == "background"),] 
-matt_max_inter <- matt_max_sp[!(matt_max_sp$Group.1 == "background"),] 
+######################################################################
+######################################################################
+######################################################################
 
   
-  for ( i in c(4:ncol(matt_max_inter))) { 
-    
-    matt_max_inter[,i] <- matt_max_inter[,i] - matt_max_bck[1,i]
-     #colMeans(apply(background_inter,2,as.numeric))[i] ## apply(apply(background_inter,2,as.numeric),2,max)[i]
-  }
-  
-
-
-date <- rep(j,nrow(matt_max_inter))
-
-matt_max2 <- data.frame(date,matt_max_inter)
-
-
-
-
-matt_max_bck_full <- rbind(matt_max_bck_full,matt_max2)
-
- 
-
-
-}
-
-
-
- 
- 
- 
-matt_max_bck_save <- matt_max_bck_full
-if(slelector == "all") {matt_max_bck_save2 <- matt_max_bck_save}
-
-
-p <- ggplot(matt_max_bck_save, aes(Group.1,matt_max_bck_save$C8H8N.))
-p + geom_boxplot()
-
-#######################################################################################
-  
-  
-  
-  
-  matt_max_bck <- matt_max_bck_save 
+  matt_max_bck <- matt_quant_bck_inter 
  #matt_max_bck<-  matt_max_bck[grep(3,matt_max_bck$Repetition_measurment),]
+
+  sample_id <- paste(matt_max_bck$Group.1,matt_max_bck$Group.2)
   
-  sample <- paste(matt_max_bck$Group.1,matt_max_bck$Group.2)
+  matt_max_bck <- data.frame(sample_id,matt_max_bck)
   
-  matt_max_bck<-   aggregate(matt_max_bck[,c(5:32)],
-                             by = list(sample), # 
-                             FUN = mean) # function(x) quantile(x, probs = 0.95)
   
   
   ########## heat map 
   
   matt_max_bck_stat <- matt_max_bck
-  matt_max_bck_stat$treatment <-  rep(1:nrow(matt_max_bck_stat))
-  colnames(matt_max_bck_stat)[1] <- "sample"
-  matt_max_bck_stat$treatment[grep("healthy",matt_max_bck_stat$sample)] <- "healthy"
-  matt_max_bck_stat$treatment[grep("induced",matt_max_bck_stat$sample)] <- "induced"
 
-  #GCMS_delprim <- GCMS_delprim[,c(1,2,16,21)]
-  
-  
-#matt_max_bck[matt_max_bck<0] <- 0
-matt_max_class <- matt_max_bck ### 
-#???matt_max_class <- matt_max_class[-grep("background",matt_max_class$Group.1),]
-
-train_data_full <- matt_max_class
-train_data_full$Group.1 <- matt_max_bck_stat$treatment
+  # Define a mapping of old names to new names
+colnames(matt_max_bck_stat)[colnames(matt_max_bck_stat) == "Group.1"]  <- "treatment"
 
 
-train_data <- train_data_full[,2:ncol(train_data_full)]
-train_label <- train_data_full$Group.1
-train_label[train_label=="healthy"] <- 2
+train_data <- matt_max_bck_stat[,6:33]
+train_label <- matt_max_bck_stat$treatment
+train_label[train_label=="healthy"] <- 0
 train_label[train_label=="induced"] <- 1
-train <- data.frame(train_label,train_data)   
-train_label2 <- train_label
-train_label2[train_label2=="2"] <- "0"
+
 
 bstSparse <- xgboost(data = as.matrix(train_data), 
-                     label = train_label2, 
+                     label = train_label, 
                      max.depth = 5, eta = 0.05, 
                      nthread = 10, nrounds = 500, 
                      objective = "binary:logistic",
@@ -204,15 +140,11 @@ if(slelector == "all") {plot_imp <- xgb.plot.importance(importance_matrix, rel_t
 if(slelector == "all") {vec_imp_save <- c("date","Group.1","Group.2",importance_matrix$Feature[1:10])}
 
 ## auto selection
-vec_imp <- c("date","Group.1","Group.2",importance_matrix$Feature[1:10])
+vec_imp <- c("date","treatment",importance_matrix$Feature[1:10])
 
-matt_max_class_filter <- matt_max_class[,colnames(matt_max_class) %in% vec_imp]
+matt_max_class_filter <- matt_max_bck_stat[,colnames(matt_max_bck_stat) %in% vec_imp]
 ########### gbm  classification 
 library(xgboost)
-
-
-
-matt_max_class_filter$Group.1 <- matt_max_bck_stat$treatment
 
 
 valid_tree <- NULL
@@ -221,44 +153,38 @@ valid_xgboost <- NULL
 for (i in c (1:nrow(matt_max_class_filter))) {
   
   
-  
   train_data_full <- matt_max_class_filter[-i,] 
-  train_data <- train_data_full[,2:ncol(train_data_full)]
-  train_label <- train_data_full$Group.1
-  train_label[train_label=="healthy"] <- 2
+  train_data <- train_data_full[,3:ncol(train_data_full)]
+  train_label <- train_data_full$treatment
+  train_label[train_label=="healthy"] <- 0
   train_label[train_label=="induced"] <- 1
-  train <- data.frame(train_label,train_data)
-  
-   tree=rpart(train_label~.,data=train,method="class")
-   train_label2 <- train_label
-   train_label2[train_label2=="2"] <- "0"
-   bstSparse <- xgboost(data = as.matrix(train_data), 
-                        label = train_label2, 
+
+  bstSparse <- xgboost(data = as.matrix(train_data), 
+                        label = train_label, 
                         max.depth = 5, eta = 0.05, 
                         nthread = 10, nrounds = 500, 
                         objective = "binary:logistic",
                         print_every_n = 100)
   
   test_data_full <- matt_max_class_filter[i,]  
-  test_data <- test_data_full[,2:ncol(test_data_full)]
-  test_label <- test_data_full$Group.1
-  test_label[test_label=="healthy"] <- 2
+  test_data <- test_data_full[,3:ncol(test_data_full)]
+  test_label <- test_data_full$treatment
+  test_label[test_label=="healthy"] <- 0
   test_label[test_label=="induced"] <- 1
 
-  xgb.pred = predict(tree,test_data,type="class")
-  
+
   pred <- predict(bstSparse, as.matrix(test_data))
+
   pred[pred>=0.5] <- 1
-  pred[pred<0.5] <- 2
+  pred[pred<0.5] <- 0
   
-  valid_tree <- c(valid_tree,xgb.pred)
   valid_xgboost <- c(valid_xgboost,pred)
   
 }
 
 
-real_data <-  matt_max_class_filter$Group.1
-real_data[real_data=="healthy"] <- 2
+real_data <-  matt_max_class_filter$treatment
+real_data[real_data=="healthy"] <- 0
 real_data[real_data=="induced"] <- 1
 
 
@@ -267,7 +193,6 @@ confi <-caret::confusionMatrix(as.factor(real_data),as.factor(valid_xgboost))
 
 
 output_conf_mat[[xx]] <- confi
-
 }
 
 data_plot_conf = NULL
