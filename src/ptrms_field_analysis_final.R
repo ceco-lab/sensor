@@ -13,7 +13,6 @@ setwd("./data")
 set.seed(6)
 
 # Load data
-
 Data_PTRMS_outdoor <- read.csv("Data.csv", sep = ";")
 
 # Convert date to Date format and get unique dates
@@ -35,6 +34,7 @@ for (i in c(1:length(Sample_ID))) {
   Data_PTRMS_outdoorx_inter$chrono <- c(1:nrow(Data_PTRMS_outdoorx_inter))
   # Reorder columns
   Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:5, ncol(Data_PTRMS_outdoorx_inter), (6):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
+  #  With "sampling order" dataframe: Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:6, ncol(Data_PTRMS_outdoorx_inter), (7):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
   # Append to the main data frame
   Data_PTRMS_outdoorx <- rbind(Data_PTRMS_outdoorx, Data_PTRMS_outdoorx_inter)
 }
@@ -49,6 +49,8 @@ for (j in c(1:length(vec_date_unique))) {
   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx1[Data_PTRMS_outdoorx1$chrono < 26, ]
   # Calculate 90th percentile for each group
   matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 7:34],
+    #with sampling order data frame: matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 8:34],
+
     by = list(Data_PTRMS_outdoorx1$Treatment, Data_PTRMS_outdoorx1$Plant),
     FUN = function(x) quantile(x, probs = 0.9)
   ))
@@ -62,7 +64,6 @@ for (j in c(1:length(vec_date_unique))) {
 
   # Copy data for modification
   matt_quant2 <- matt_quant
-
   # Subtract background values
   for (i in c(3:ncol(matt_quant2))) {
     matt_quant2[, i] <- matt_quant2[, i] - background[nrow(background), i]
@@ -94,6 +95,7 @@ matt_quant_x[matt_quant_x < 0] <- 0
 
 # Perform NMDS analysis
 nmds <- metaMDS(matt_quant_x, distance = "gower")
+
 
 # Prepare data for NMDS plot
 matt_plot_nmds <- vegan::scores(nmds)[1] %>% cbind(matt_quant_stat)
