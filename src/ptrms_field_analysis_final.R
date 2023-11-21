@@ -117,6 +117,9 @@ nmds_plot
 
 # PERMANOVA analysis
 ado <- adonis2(matt_quant_x ~ matt_quant_stat$treatment, permutations = 999, method = "gower")
+ado
+
+#Random Forest analysis
 
 # Prepare data for Random Forest analysis
 # Select input variables
@@ -126,20 +129,12 @@ matt_quant_stat_rf$treatment <- as.factor(matt_quant_stat$treatment)
 
 # Perform Random Forest analysis with permutation test
 rp <- rfPermute(treatment ~ ., data = matt_quant_stat_rf, na.action = na.omit, ntree = 1000, num.rep = 150)
-
+rp
 # Plot variable importance
 var_imp <- plotImportance(rp, scale = TRUE, size = 3)
 
-# print output
-ado
-rp
-nmds_plot
 
 #Univariate analysis
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
 
 Univar <- function(variable) {
