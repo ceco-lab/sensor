@@ -28,7 +28,7 @@ set.seed(6)
 
 # Load data
 setwd("G:\\Mon Drive\\taf\\git_repository\\sensor_paper_farce\\data")
-Data_PTRMS_outdoor <- read.csv("Data.csv", sep = ";")
+Data_PTRMS_outdoor <- read.csv("Data_backgrounds.csv", sep = ",")
 
 
 vec_comb <- c("all","1","2","3","1_2","1_3","2_3")
@@ -38,16 +38,36 @@ for (xx in c(1:length(vec_comb))) {
 
 slelector <- vec_comb[xx]
 
+Data_PTRMS_outdoor_sp <- Data_PTRMS_outdoor[!(Data_PTRMS_outdoor$Treatment == "background"),]
+Data_PTRMS_outdoor_back <- Data_PTRMS_outdoor[(Data_PTRMS_outdoor$Treatment == "background"),]
+
+if(slelector == "all") {Data_PTRMS_outdoor_Rep <- Data_PTRMS_outdoor_sp}
+if(slelector == "all") {Data_PTRMS_outdoor_Rep <- rbind(Data_PTRMS_outdoor_Rep,Data_PTRMS_outdoor_back)}
+
+if(slelector == "1") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor_sp[grep(1,Data_PTRMS_outdoor_sp$Repetition_measurment),]}
+if(slelector == "1") {Data_PTRMS_outdoor_rep_bck <-  Data_PTRMS_outdoor_back[Data_PTRMS_outdoor_back$back_link %in% Data_PTRMS_outdoor_Rep$back_link,]}
+if(slelector == "1") {Data_PTRMS_outdoor_Rep <- rbind(Data_PTRMS_outdoor_Rep,Data_PTRMS_outdoor_rep_bck)}
+
+if(slelector == "2") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor_sp[grep(2,Data_PTRMS_outdoor_sp$Repetition_measurment),]}
+if(slelector == "2") {Data_PTRMS_outdoor_rep_bck <-  Data_PTRMS_outdoor_back[Data_PTRMS_outdoor_back$back_link %in% Data_PTRMS_outdoor_Rep$back_link,]}
+if(slelector == "2") {Data_PTRMS_outdoor_Rep <- rbind(Data_PTRMS_outdoor_Rep,Data_PTRMS_outdoor_rep_bck)}
+
+if(slelector == "3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor_sp[grep(3,Data_PTRMS_outdoor_sp$Repetition_measurment),]}
+if(slelector == "3") {Data_PTRMS_outdoor_rep_bck <-  Data_PTRMS_outdoor_back[Data_PTRMS_outdoor_back$back_link %in% Data_PTRMS_outdoor_Rep$back_link,]}
+if(slelector == "3") {Data_PTRMS_outdoor_Rep <- rbind(Data_PTRMS_outdoor_Rep,Data_PTRMS_outdoor_rep_bck)}
 
 
-if(slelector == "all") {Data_PTRMS_outdoor_Rep <- Data_PTRMS_outdoor}
-if(slelector == "1") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[grep(1,Data_PTRMS_outdoor$Repetition_measurment),]}
-if(slelector == "2") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[grep(2,Data_PTRMS_outdoor$Repetition_measurment),]}
-if(slelector == "3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[grep(3,Data_PTRMS_outdoor$Repetition_measurment),]}
-if(slelector == "1_2") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[-grep(3,Data_PTRMS_outdoor$Repetition_measurment),]}
-if(slelector == "1_3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[-grep(2,Data_PTRMS_outdoor$Repetition_measurment),]}
-if(slelector == "2_3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[-grep(1,Data_PTRMS_outdoor$Repetition_measurment),]}
+if(slelector == "1_2") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor_sp[-grep(3,Data_PTRMS_outdoor_sp$Repetition_measurment),]}
+if(slelector == "1_2") {Data_PTRMS_outdoor_rep_bck <-  Data_PTRMS_outdoor_back[Data_PTRMS_outdoor_back$back_link %in% Data_PTRMS_outdoor_Rep$back_link,]}
+if(slelector == "1_2") {Data_PTRMS_outdoor_Rep <- rbind(Data_PTRMS_outdoor_Rep,Data_PTRMS_outdoor_rep_bck)}
 
+if(slelector == "1_3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor_sp[-grep(2,Data_PTRMS_outdoor_sp$Repetition_measurment),]}
+if(slelector == "1_3") {Data_PTRMS_outdoor_rep_bck <-  Data_PTRMS_outdoor_back[Data_PTRMS_outdoor_back$back_link %in% Data_PTRMS_outdoor_Rep$back_link,]}
+if(slelector == "1_3") {Data_PTRMS_outdoor_Rep <- rbind(Data_PTRMS_outdoor_Rep,Data_PTRMS_outdoor_rep_bck)}
+
+if(slelector == "2_3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor_sp[-grep(3,Data_PTRMS_outdoor_sp$Repetition_measurment),]}
+if(slelector == "2_3") {Data_PTRMS_outdoor_rep_bck <-  Data_PTRMS_outdoor_back[Data_PTRMS_outdoor_back$back_link %in% Data_PTRMS_outdoor_Rep$back_link,]}
+if(slelector == "2_3") {Data_PTRMS_outdoor_Rep <- rbind(Data_PTRMS_outdoor_Rep,Data_PTRMS_outdoor_rep_bck)}
 
 
 # Convert date to Date format and get unique dates
@@ -69,7 +89,7 @@ for (i in c(1:length(Sample_ID))) {
   # Create a chronological column
   Data_PTRMS_outdoorx_inter$chrono <- c(1:nrow(Data_PTRMS_outdoorx_inter))
   # Reorder columns
-  Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:5, ncol(Data_PTRMS_outdoorx_inter), (6):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
+  Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:6, ncol(Data_PTRMS_outdoorx_inter), (7):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
   # Append to the main data frame
   Data_PTRMS_outdoorx <- rbind(Data_PTRMS_outdoorx, Data_PTRMS_outdoorx_inter)
 
@@ -79,6 +99,8 @@ for (i in c(1:length(Sample_ID))) {
 
 #Initialize empty data frame 
 matt_quant_bck <- NULL
+bck_unique <- unique(Data_PTRMS_outdoorx$back_link)
+
 # Calculate 90th percentile for each sample and background by date and remove background
 for (j in c(1:length(vec_date_unique))) {
   # Subset data for each unique date
@@ -86,7 +108,8 @@ for (j in c(1:length(vec_date_unique))) {
   # Ensure measurement time is 25 sec
   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx1[Data_PTRMS_outdoorx1$chrono < 26, ]
   # Calculate 90th percentile for each group
-  matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 7:34],
+
+  matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 8:35],
     by = list(Data_PTRMS_outdoorx1$Treatment, Data_PTRMS_outdoorx1$Plant),
     FUN = function(x) quantile(x, probs = 0.9)
   ))
@@ -97,14 +120,13 @@ for (j in c(1:length(vec_date_unique))) {
   unique(matt_quant$Group.1)
   # Separate background data
   background <- matt_quant[matt_quant$Group.1 == "background", ]
-  background
+
   # Remove background data from main data
   matt_quant <- matt_quant[!(matt_quant$Group.1 == "background"), ]
 
   # Copy data for modification
   matt_quant2 <- matt_quant
 
-  matt_quant2 <- subset(matt_quant2, !(Group.2 == 29))
   # Subtract background values
   for (i in c(3:ncol(matt_quant2))) {
     matt_quant2[, i] <- matt_quant2[, i] - background[nrow(background), i]
