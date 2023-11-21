@@ -278,7 +278,7 @@ accura_plot <- ggplot() +
   theme_classic() +
   scale_fill_viridis() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1))
-
+ggsave("accuracy.pdf",accura_plot)
 
 # Importance plot
 plot_imp_tot <- ggplot(plot_imp, aes(x = reorder(Feature, Importance), y = Importance, fill = Importance)) +
@@ -286,13 +286,13 @@ plot_imp_tot <- ggplot(plot_imp, aes(x = reorder(Feature, Importance), y = Impor
   theme_classic() +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-plot_imp_tot
+ggsave("Importance.pdf",plot_imp_tot)
+
 
 # Confusion matrix
 conf_table <- output_conf_mat[[1]]$table
 colnames(conf_table) <- c("healty", "induced")
 rownames(conf_table) <- c("healty", "induced")
 CM <- fourfoldplot(conf_table)
+ggsave("CM_plot.pdf", plot = CM)
 
-
-CM
