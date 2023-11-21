@@ -5,6 +5,20 @@ library(ggplot2)
 library(dplyr)
 library(ape)
 library(ggalt)
+library(xgboost)
+library(caret)
+library(rpart)
+library(sp)
+library(rayshader)
+library(rgl)
+library(readobj)
+library(vegan)
+library(rfPermute)
+library(randomForest)
+library(ggalt)
+library(ggplot)
+library(dplyr)
+
 
 # Set working directory
 setwd("./data")
@@ -13,16 +27,36 @@ setwd("./data")
 set.seed(6)
 
 # Load data
-
+setwd("G:\\Mon Drive\\taf\\git_repository\\sensor_paper_farce\\data")
 Data_PTRMS_outdoor <- read.csv("Data.csv", sep = ";")
-Data_PTRMS_outdoor$Repetition_measurment[Data_PTRMS_outdoor$Treatment=="background"] <- 0
+
+
+vec_comb <- c("all","1","2","3","1_2","1_3","2_3")
+output_conf_mat <- list()
+
+for (xx in c(1:length(vec_comb))) {
+
+slelector <- vec_comb[xx]
+
+
+
+if(slelector == "all") {Data_PTRMS_outdoor_Rep <- Data_PTRMS_outdoor}
+if(slelector == "1") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[grep(1,Data_PTRMS_outdoor$Repetition_measurment),]}
+if(slelector == "2") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[grep(2,Data_PTRMS_outdoor$Repetition_measurment),]}
+if(slelector == "3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[grep(3,Data_PTRMS_outdoor$Repetition_measurment),]}
+if(slelector == "1_2") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[-grep(3,Data_PTRMS_outdoor$Repetition_measurment),]}
+if(slelector == "1_3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[-grep(2,Data_PTRMS_outdoor$Repetition_measurment),]}
+if(slelector == "2_3") {Data_PTRMS_outdoor_Rep <-  Data_PTRMS_outdoor[-grep(1,Data_PTRMS_outdoor$Repetition_measurment),]}
+
+
 
 # Convert date to Date format and get unique dates
-vec_date <- as.Date(Data_PTRMS_outdoor$Date, format = "%m/%d/%y")
+vec_date <- as.Date(Data_PTRMS_outdoor_Rep$Date, format = "%m/%d/%y")
 vec_date_unique <- unique(vec_date)
 
+
 # Get unique sample IDs
-Sample_ID <- unique(Data_PTRMS_outdoor$Sample_ID)
+Sample_ID <- unique(Data_PTRMS_outdoor_Rep$Sample_ID)
 
 
 # Initialize empty data frame
@@ -31,14 +65,17 @@ Data_PTRMS_outdoorx <- NULL
 # Build time column for each sample
 for (i in c(1:length(Sample_ID))) {
   # Subset data for each sample ID
-  Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoor[Data_PTRMS_outdoor$Sample_ID == Sample_ID[i], ]
+  Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoor_Rep[Data_PTRMS_outdoor_Rep$Sample_ID == Sample_ID[i], ]
   # Create a chronological column
   Data_PTRMS_outdoorx_inter$chrono <- c(1:nrow(Data_PTRMS_outdoorx_inter))
   # Reorder columns
   Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:5, ncol(Data_PTRMS_outdoorx_inter), (6):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
   # Append to the main data frame
   Data_PTRMS_outdoorx <- rbind(Data_PTRMS_outdoorx, Data_PTRMS_outdoorx_inter)
+
 }
+
+
 
 #Initialize empty data frame 
 matt_quant_bck <- NULL
@@ -50,7 +87,7 @@ for (j in c(1:length(vec_date_unique))) {
   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx1[Data_PTRMS_outdoorx1$chrono < 26, ]
   # Calculate 90th percentile for each group
   matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 7:34],
-    by = list(Data_PTRMS_outdoorx1$Treatment, Data_PTRMS_outdoorx1$Plant,Data_PTRMS_outdoorx1$Repetition_measurment),
+    by = list(Data_PTRMS_outdoorx1$Treatment, Data_PTRMS_outdoorx1$Plant),
     FUN = function(x) quantile(x, probs = 0.9)
   ))
 
@@ -80,23 +117,6 @@ for (j in c(1:length(vec_date_unique))) {
   matt_quant_bck <- rbind(matt_quant_bck, matt_quant2)
 }
 ## loop stops here
-colnames(matt_quant_bck)[colnames(matt_quant_bck) == "Group.3"]  <- "Repetition_measurment"
-
-
-vec_comb <- c("all","1","2","3","1_2","1_3","2_3")
-output_conf_mat <- list()
-
-for (xx in c(1:length(vec_comb))) {
-
-slelector <- vec_comb[xx]
-
-if(slelector == "all") {matt_quant_bck_inter <- matt_quant_bck}
-if(slelector == "1") {matt_quant_bck_inter <-  matt_quant_bck[grep(1,matt_quant_bck$Repetition_measurment),]}
-if(slelector == "2") {matt_quant_bck_inter <-  matt_quant_bck[grep(2,matt_quant_bck$Repetition_measurment),]}
-if(slelector == "3") {matt_quant_bck_inter <-  matt_quant_bck[grep(3,matt_quant_bck$Repetition_measurment),]}
-if(slelector == "1_2") {matt_quant_bck_inter <-  matt_quant_bck[-grep(3,matt_quant_bck$Repetition_measurment),]}
-if(slelector == "1_3") {matt_quant_bck_inter <-  matt_quant_bck[-grep(2,matt_quant_bck$Repetition_measurment),]}
-if(slelector == "2_3") {matt_quant_bck_inter <-  matt_quant_bck[-grep(1,matt_quant_bck$Repetition_measurment),]}
 
 
 ######################################################################
@@ -104,7 +124,7 @@ if(slelector == "2_3") {matt_quant_bck_inter <-  matt_quant_bck[-grep(1,matt_qua
 ######################################################################
 
   
-  matt_max_bck <- matt_quant_bck_inter 
+  matt_max_bck <- matt_quant_bck  
  #matt_max_bck<-  matt_max_bck[grep(3,matt_max_bck$Repetition_measurment),]
 
   sample_id <- paste(matt_max_bck$Group.1,matt_max_bck$Group.2)
@@ -121,7 +141,7 @@ if(slelector == "2_3") {matt_quant_bck_inter <-  matt_quant_bck[-grep(1,matt_qua
 colnames(matt_max_bck_stat)[colnames(matt_max_bck_stat) == "Group.1"]  <- "treatment"
 
 
-train_data <- matt_max_bck_stat[,6:33]
+train_data <- matt_max_bck_stat[,5:32]
 train_label <- matt_max_bck_stat$treatment
 train_label[train_label=="healthy"] <- 0
 train_label[train_label=="induced"] <- 1
