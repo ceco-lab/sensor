@@ -2,8 +2,7 @@
 library(vegan)
 library(rfPermute)
 library(ggplot2)
-library(dplyr)
-library(ape)
+library(tidyverse)
 library(ggalt)
 
 # Set working directory
@@ -13,7 +12,7 @@ setwd("./data")
 set.seed(6)
 
 # Load data
-Data_PTRMS_outdoor <- read.csv("Data.csv", sep = ";")
+Data_PTRMS_outdoor <- read.csv("Data_backgrounds.csv", sep = ",")
 
 # Convert date to Date format and get unique dates
 vec_date <- as.Date(Data_PTRMS_outdoor$Date, format = "%m/%d/%y")
@@ -33,8 +32,7 @@ for (i in c(1:length(Sample_ID))) {
   # Create a chronological column
   Data_PTRMS_outdoorx_inter$chrono <- c(1:nrow(Data_PTRMS_outdoorx_inter))
   # Reorder columns
-  Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:5, ncol(Data_PTRMS_outdoorx_inter), (6):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
-  #  With "sampling order" dataframe: Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:6, ncol(Data_PTRMS_outdoorx_inter), (7):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
+  Data_PTRMS_outdoorx_inter <- Data_PTRMS_outdoorx_inter[, c(1:6, ncol(Data_PTRMS_outdoorx_inter), (7):(ncol(Data_PTRMS_outdoorx_inter) - 1))]
   # Append to the main data frame
   Data_PTRMS_outdoorx <- rbind(Data_PTRMS_outdoorx, Data_PTRMS_outdoorx_inter)
 }
@@ -48,8 +46,7 @@ for (j in c(1:length(vec_date_unique))) {
   # Ensure measurement time is 25 sec
   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx1[Data_PTRMS_outdoorx1$chrono < 26, ]
   # Calculate 90th percentile for each group
-  matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 7:34],
-    #with sampling order data frame: matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 8:34],
+  matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 8:35],
 
     by = list(Data_PTRMS_outdoorx1$Treatment, Data_PTRMS_outdoorx1$Plant),
     FUN = function(x) quantile(x, probs = 0.9)
@@ -134,12 +131,81 @@ rp <- rfPermute(treatment ~ ., data = matt_quant_stat_rf, na.action = na.omit, n
 var_imp <- plotImportance(rp, scale = TRUE, size = 3)
 
 # print output
-
 ado
-
 rp
-
-title <- "PTRMS field result"
-grid::grid.text(title, x = (0.5), y = (0.6))
 nmds_plot
-plotImportance(rp, scale = TRUE, size = 3)
+
+#Univariate analysis
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
+
+Univar <- function(variable) {
+
+  Summary_sub <- matt_quant_stat %>%
+    select(treatment, !!sym(variable)) %>%
+    pivot_longer(!c(treatment), names_to = "compounds", values_to = "value") %>%
+    group_by(treatment, compounds) %>%
+    summarise(mean = mean(value), se = sd(value) / sqrt(n())) %>%
+    as.data.frame()
+
+  X <- Summary_sub %>% filter(compounds == variable)
+
+  cat(paste0(variable, ": ", round((X[X$treatment == "induced", "mean"] - X[X$treatment == "healthy", "mean"]) / abs(X[X$treatment == "healthy", "mean"]) * 100, 0), "% increase\n"))
+  print(wilcox.test(unlist(matt_quant_stat[, variable]) ~ treatment, data = matt_quant_stat))
+
+  gg <- ggplot(X, aes(x = treatment, y = mean, fill = treatment)) +
+    geom_bar(position = position_dodge(), color = "black", stat = "identity", linewidth = 0.25, width = 0.85) +
+    geom_errorbar(position = position_dodge(0.9), aes(ymin = mean - se, ymax = mean + se),
+                  width = 0.3, linewidth = 0.25) +
+    ggtitle(variable) +
+    scale_x_discrete(labels = c("Control", "Damaged")) +
+    ylab(expression(paste("Ions/s"))) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(size = 0.25, linetype = "solid"),
+      axis.ticks = element_line(size = 0.25),
+      axis.text.y = element_text(size = 11),
+      axis.text.x = element_text(size = 12, colour = "black"),
+      axis.title.y = element_text(size = 12, vjust = 3),
+      axis.title.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      legend.text = element_text(size = 9),
+      legend.title = element_blank(),
+      legend.key.size = unit(0.3, 'cm'),
+      plot.title = element_text(hjust = 0.5, size = 12),
+      legend.position = "none"
+    )
+
+  ggsave(paste0("Barplot_substracted", variable, ".pdf"), width = 4.25, height = 5, units = "cm", dpi = 600, scale = 2)
+}
+
+# Applying the function to each variable
+lapply(Variables, Univar)
+
+
+#Traces
+Comparison4 <- Data_PTRMS_outdoorx|> filter(Sample_ID == "T18S1"|Sample_ID == "C18L1")
+Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
+
+# Function to create ggplot
+create_trace_plot <- function(variable) {
+  plot <- ggplot(Comparison4, aes(x = chrono, y = .data[[variable]], group = Sample_ID, colour = Sample_ID)) +
+    geom_line(linewidth = 1) +
+    scale_color_manual(values = c("green4", "red3"), labels = c("Healthy", "Induced")) +
+    xlab("Time (s)") +
+    ylab("Ions/s") +
+    ggtitle(variable) +
+    theme(
+      plot.title = element_text(size = 10),
+      axis.title = element_text(size = 10),
+      legend.title = element_blank(),
+      legend.text = element_text(size = 10)
+    )
+  ggsave(paste0("Trace_", variable, ".pdf"), width = 7, height = 5, units = "cm", dpi = 600, scale = 2)
+  }
+
+# Applying the function to each variable
+lapply(Variables, create_trace_plot)
