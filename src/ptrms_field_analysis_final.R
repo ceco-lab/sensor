@@ -136,6 +136,7 @@ var_imp <- plotImportance(rp, scale = TRUE, size = 3)
 
 #Univariate analysis
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
+Summary_sub2 <- data.frame()
 
 Univar <- function(variable) {
 
@@ -156,6 +157,7 @@ Univar <- function(variable) {
     geom_errorbar(position = position_dodge(0.9), aes(ymin = mean - se, ymax = mean + se),
                   width = 0.3, linewidth = 0.25) +
     ggtitle(variable) +
+    scale_fill_manual(values = c("green4", "red3"), labels = c("Healthy", "Induced")) +
     scale_x_discrete(labels = c("Control", "Damaged")) +
     ylab(expression(paste("Ions/s"))) +
     theme_classic() +
@@ -175,17 +177,19 @@ Univar <- function(variable) {
     )
 
   ggsave(paste0("Barplot_substracted", variable, ".pdf"), width = 4.25, height = 5, units = "cm", dpi = 600, scale = 2)
+  return(Summary_sub)
+
 }
 
-# Applying the function to each variable
-lapply(Variables, Univar)
+Barplots <- lapply(Variables, Univar)
+Summary_sub2 <- do.call(rbind, Barplots) 
+write.csv(Summary_sub2, "Summary.csv", row.names = FALSE)
 
 
 #Traces
 Comparison4 <- Data_PTRMS_outdoorx|> filter(Sample_ID == "T18S1"|Sample_ID == "C18L1")
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
 
-# Function to create ggplot
 create_trace_plot <- function(variable) {
   plot <- ggplot(Comparison4, aes(x = chrono, y = .data[[variable]], group = Sample_ID, colour = Sample_ID)) +
     geom_line(linewidth = 1) +
@@ -202,5 +206,4 @@ create_trace_plot <- function(variable) {
   ggsave(paste0("Trace_", variable, ".pdf"), width = 7, height = 5, units = "cm", dpi = 600, scale = 2)
   }
 
-# Applying the function to each variable
-lapply(Variables, create_trace_plot)
+Traces <- lapply(Variables, create_trace_plot)
