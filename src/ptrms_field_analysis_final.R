@@ -114,10 +114,14 @@ nmds_plot <- ggplot(data = matt_plot_nmds, aes(x = sites.NMDS1, y = sites.NMDS2)
   scale_color_manual(values = cols) +
   annotate("text", x = -0.6, y = 0.5, label = paste0("stress: ", format(nmds$stress, digits = 4)), hjust = 0)
 nmds_plot
+ggsave("NMDS.pdf",  dpi = 600)
+
 
 # PERMANOVA analysis
-ado <- adonis2(matt_quant_x ~ matt_quant_stat$treatment, permutations = 999, method = "gower")
-ado
+sink("permanova_output.txt")  # Redirect output to a file
+adonis2(matt_quant_x ~ matt_quant_stat$treatment, permutations = 999, method = "gower")
+sink()  # Stop redirecting output
+
 
 #Random Forest analysis
 
@@ -128,8 +132,10 @@ matt_quant_stat_rf <- matt_quant_stat[, 4:(ncol(matt_quant_stat) - 1)]
 matt_quant_stat_rf$treatment <- as.factor(matt_quant_stat$treatment)
 
 # Perform Random Forest analysis with permutation test
-rp <- rfPermute(treatment ~ ., data = matt_quant_stat_rf, na.action = na.omit, ntree = 1000, num.rep = 150)
-rp
+sink("rp_output.txt")  
+rfPermute(treatment ~ ., data = matt_quant_stat_rf, na.action = na.omit, ntree = 1000, num.rep = 150)
+sink()  
+
 # Plot variable importance
 var_imp <- plotImportance(rp, scale = TRUE, size = 3)
 
