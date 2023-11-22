@@ -154,9 +154,10 @@ Univar <- function(variable) {
     as.data.frame()
 
   X <- Summary_sub %>% filter(compounds == variable)
-
+  sink(paste0("Wilcox", variable, ".txt"))  
   cat(paste0(variable, ": ", round((X[X$treatment == "induced", "mean"] - X[X$treatment == "healthy", "mean"]) / abs(X[X$treatment == "healthy", "mean"]) * 100, 0), "% increase\n"))
   print(wilcox.test(unlist(matt_quant_stat[, variable]) ~ treatment, data = matt_quant_stat))
+  sink()
 
   gg <- ggplot(X, aes(x = treatment, y = mean, fill = treatment)) +
     geom_bar(position = position_dodge(), color = "black", stat = "identity", linewidth = 0.25, width = 0.85) +
