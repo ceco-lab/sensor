@@ -23,7 +23,7 @@ myColorRamp <- function(colors, values) {
 setwd("./data")
 
 # Load data
-Aventicum_PTRlab <- read.csv("Aventicum_PTRlab_new.csv", sep = ";")
+Aventicum_PTRlab <- read.csv("Delprim_PTRlab_new.csv", sep = ";")
 
 
 Sample_ID <- unique(Aventicum_PTRlab$Sample_ID)
