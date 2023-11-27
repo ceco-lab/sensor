@@ -1,64 +1,53 @@
-
-library(ggtree)
 library(vegan)
-library(ggplot2)
-library(wesanderson)
-library(ggalt)
-library(caret)
-library(randomForest)
 library(rfPermute)
-library(ape)
+library(ggplot2)
+library(tidyverse)
+library(ggalt)
 
-######################################################################
-#######################MSS sensors data
+
+set.seed(6)
 
 setwd("./data")
 
-
-module1 <- read.csv("module1_Adventicum.csv",sep=",")
-
-module1x  <-module1[,3:ncol(module1)]
-row.names(module1x) <- module1$PrimaryID
-module1x  <-module1x[,seq(1,ncol(module1x),10)]
+Variety="Delprim"
+#Variety="Aventicum"
 
 
-cols <- wes_palette("Cavalcanti1")
-cols <-cols[c(4,1,5,2)]
-cols[4] <- "royalblue4"
-cols[1] <- "darkgreen"
-cols <- cols[c(2,1,3,4)]
+if (Variety == "Delprim") {
+  MSS <- read.csv("MSS_Delprim.csv", sep = ",") # Delprim data
+} else if (Variety == "Aventicum") {
+  MSS <- read.csv("MSS_Aventicum.csv", sep = ",") # Aventicum data
+}
+
+#Keep only features
+MSS_x <- MSS[, 3:ncol(MSS)]
+row.names(MSS_x) <- MSS$PrimaryID
+#MSS_x  <-MSS_x[,seq(1,ncol(MSS_x),10)]
 
 
-####3 meta mds
+cols <-c("#D8B70A","darkgreen","#972D15","royalblue4")
 
-cols2 <- cols#sample(hcl.colors(10, "Vik"))
-
-
-nmds <- metaMDS(module1x,distance="gower")
+nmds <- metaMDS(MSS_x,distance="gower")
 
 nmds_plot<- vegan::scores(nmds) %>%
-  cbind(module1) %>%
+  cbind(MSS) %>%
   ggplot(aes(x = NMDS1, y = NMDS2)) +
-  geom_encircle(aes(group = ClassID, color = ClassID, fill = ClassID), alpha = 0.8,s_shape=0.8) +
-  geom_point(aes(color = ClassID)) +
+  geom_encircle(aes(group = treatment, color = treatment, fill = treatment), alpha = 0.8,s_shape=0.8) +
+  geom_point(aes(color = treatment)) +
   annotate("text", x = -1, y = 0.5, label = paste0("stress: ", format(nmds$stress, digits = 4)), hjust = 0) +
-  theme_bw() + scale_fill_manual(values=cols2) + scale_color_manual(values=cols2)
+    theme_bw() + scale_fill_manual(values=cols) + scale_color_manual(values=cols)  +
+  theme(legend.position="none")
 
 nmds_plot
+ggsave(paste0("NMDS_MSS", Variety, ".pdf"), dpi = 600)
 
-### data supervizer
+# PERMANOVA 
+sink(paste0("permanova_MSS_",Variety,".txt"))  # Redirect output to a file
+adonis2(MSS_x ~ MSS$treatment, permutations = 999, method = "gower")
+sink()  
 
-module1rf  <-module1x[,seq(1,ncol(module1x),10)]
-
-module1rf_rf<-module1rf[,2:ncol(module1rf)]
-module1rf_rf$treatment <- as.factor(substr(row.names(module1rf_rf), start = 1, stop = 2))
-
-
-
-#### randomforest 
-
-model_1 = randomForest(treatment~., data = module1rf_rf, importance = TRUE,ntree=10000)
-
-ozone.rp <- rfPermute(treatment ~ ., data = module1rf_rf, na.action = na.omit, ntree = 100, num.rep = 50)
-ozone.rp
-
+#Random forest 
+MSS_x$treatment <- as.factor(MSS$treatment)
+sink(paste0("rf_MSS_",Variety,".txt"))  # Redirect output to a file
+rfPermute(treatment ~ ., data = MSS_x, na.action = na.omit, ntree = 1000, num.rep = 150)
+sink()  
