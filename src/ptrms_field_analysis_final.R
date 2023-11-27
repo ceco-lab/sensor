@@ -193,14 +193,16 @@ Summary_sub2 <- do.call(rbind, Barplots)
 write.csv(Summary_sub2, "Summary.csv", row.names = FALSE)
 
 
-#Traces
-Comparison4 <- Data_PTRMS_outdoorx|> filter(Sample_ID == "T18S1"|Sample_ID == "C18L1")
+#Traces#T18S1 and C18L1
+#T18S3 and C18L3 ok
+Comparison4 <- Data_PTRMS_outdoorx|> filter(Sample_ID == "T18S3"|Sample_ID == "C18L3")
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
 
 create_trace_plot <- function(variable) {
   plot <- ggplot(Comparison4, aes(x = chrono, y = .data[[variable]], group = Sample_ID, colour = Sample_ID)) +
     geom_line(linewidth = 1) +
-    scale_color_manual(values = c("green4", "red3"), labels = c("Healthy", "Induced")) +
+    scale_x_continuous(expand = c(0, 0)) +
+     scale_color_manual(values = c("green4", "red3"), labels = c("Healthy", "Induced")) +
     xlab("Time (s)") +
     ylab("Ions/s") +
     ggtitle(variable) +
@@ -208,9 +210,10 @@ create_trace_plot <- function(variable) {
       plot.title = element_text(size = 10),
       axis.title = element_text(size = 10),
       legend.title = element_blank(),
-      legend.text = element_text(size = 10)
+      legend.text = element_text(size = 10),
+      legend.position="none"
     )
-  ggsave(paste0("Trace_", variable, ".pdf"), width = 7, height = 5, units = "cm", dpi = 600, scale = 2)
+  ggsave(paste0("Trace_", variable, ".pdf"), width = 5, height = 5, units = "cm", dpi = 600, scale = 2)
   }
 
 Traces <- lapply(Variables, create_trace_plot)
