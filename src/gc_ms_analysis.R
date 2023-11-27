@@ -40,7 +40,7 @@ nmds_plot <- vegan::scores(nmds)[1] %>%
   theme(legend.position="none")
 
 nmds_plot
-ggsave(paste0("NMDS_GC", Variety, ".pdf"), width=8, height=8,dpi = 600)
+ggsave(paste0("NMDS_GC_", Variety, ".pdf"), width=8, height=8,dpi = 600)
 
 # PERMANOVA 
 sink(paste0("permanova_GC_",Variety,".txt"))  
