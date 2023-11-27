@@ -32,7 +32,7 @@ nmds_plot <- vegan::scores(nmds)[1] %>%
   ggplot(aes(x = sites.NMDS1, y = sites.NMDS2)) +
   xlab(label = "NMDS1") +
   ylab(label = "NMDS2") +
-  geom_encircle(aes(group = treatment, color = treatment, fill = treatment), alpha = 0.6, s_shape = 0.8) +
+  geom_encircle(aes(group = treatment, color = treatment, fill = treatment), alpha = 0.6, s_shape = 0.8,expand=0.03) +
   geom_point(aes(color = treatment)) +
   annotate("text", x = -0.35, y = 0.3, label = paste0("stress: ", round(nmds$stress, digits = 4)), hjust = 0) +
   xlim(-0.4, 0.5) + ylim(-0.3, 0.3) +
