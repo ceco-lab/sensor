@@ -17,21 +17,17 @@ if (Variety == "Delprim") {
   PTRMS <- read.csv("PTR_Lab_Aventicum.csv", sep = ",") # Aventicum data
 }
 
-str(PTRMS)
-dim(PTRMS)
+
 Sample_ID <- unique(PTRMS$Sample_ID)
 matt_90 <-   data.frame(aggregate(PTRMS[,3:38],
                                   by = list(PTRMS$Sample_ID,PTRMS$treatment), 
                                   FUN = function(x) quantile(x, probs = 0.9))) # function(x) quantile(x, probs = 0.95)
-str(matt_90)
 
 
 matt_90_stat <- matt_90
 matt_90_stat$sample <- matt_90_stat$Group.1
 colnames(matt_90_stat)[2] <- "treatment"
-str(matt_90_stat)
 matt_90_x  <-matt_90_stat[,3:(ncol(matt_90_stat)-1)]
-str(matt_90_x)
 row.names(matt_90_x) <- matt_90_stat$sample
 
 
