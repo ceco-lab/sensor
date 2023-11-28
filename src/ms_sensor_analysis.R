@@ -9,8 +9,8 @@ set.seed(6)
 
 setwd("./data")
 
-Variety="Delprim"
-#Variety="Aventicum"
+#Variety="Delprim"
+Variety="Aventicum"
 
 
 if (Variety == "Delprim") {
@@ -18,11 +18,10 @@ if (Variety == "Delprim") {
 } else if (Variety == "Aventicum") {
   MSS <- read.csv("MSS_Aventicum.csv", sep = ",") # Aventicum data
 }
-
+str(MSS)
 #Keep only features
 MSS_x <- MSS[, 3:ncol(MSS)]
 row.names(MSS_x) <- MSS$PrimaryID
-#MSS_x  <-MSS_x[,seq(1,ncol(MSS_x),10)]
 
 
 cols <-c("#D8B70A","darkgreen","#972D15","royalblue4")

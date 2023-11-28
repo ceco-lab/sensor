@@ -8,8 +8,8 @@ setwd("./data")
 
 set.seed(6)
 
-#Variety="Delprim"
-Variety="Aventicum"
+Variety="Delprim"
+#Variety="Aventicum"
 
 if (Variety == "Delprim") {
   PTRMS <- read.csv("PTR_Lab_Delprim.csv", sep = ",") # Delprim data
@@ -51,7 +51,7 @@ nmds_plot
 ggsave(paste0("NMDS_PTRMS_", Variety, ".pdf"), dpi = 600)
 
 # PERMANOVA 
-sink(paste0("permanova_GC_",Variety,".txt"))  # Redirect output to a file
+sink(paste0("permanova_PTRMS_",Variety,".txt"))  # Redirect output to a file
 adonis2(matt_90_x ~ matt_90_stat$treatment, permutations = 999, method = "gower")
 sink()  
 
