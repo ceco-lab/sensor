@@ -182,7 +182,7 @@ for (xx in c(1:length(vec_comb))) {
     data = as.matrix(train_data),
     label = train_label,
     max.depth = 5, eta = 0.05,
-    nthread = 10, nrounds = 500,
+    nthread = 10, nrounds = 1000,
     objective = "binary:logistic",
     print_every_n = 100
   )
@@ -216,7 +216,7 @@ for (xx in c(1:length(vec_comb))) {
       data = as.matrix(train_data),
       label = train_label,
       max.depth = 5, eta = 0.05,
-      nthread = 10, nrounds = 500,
+      nthread = 10, nrounds = 1000,
       objective = "binary:logistic",
       print_every_n = 100
     )
