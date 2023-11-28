@@ -99,14 +99,14 @@ matt_plot_nmds <- vegan::scores(nmds)[1] %>% cbind(matt_quant_stat)
 matt_plot_nmds <- matt_plot_nmds[-40, ]
 
 # Plot NMDS
-cols <- c("khaki", "darkred")
+cols <-c("darkgreen","#972D15")
 nmds_plot <- ggplot(data = matt_plot_nmds, aes(x = sites.NMDS1, y = sites.NMDS2)) +
   xlab(label = "NMDS1") +
   ylab(label = "NMDS2") +
-  geom_encircle(data = subset(matt_plot_nmds, treatment == "healthy"), color = cols[2], fill = cols[2], alpha = 0.5, s_shape = 0.8) +
-  geom_encircle(data = subset(matt_plot_nmds, treatment == "induced"), color = cols[1], fill = cols[1], alpha = 0.5, s_shape = 0.8) +
-  geom_point(data = subset(matt_plot_nmds, treatment == "healthy"), color = cols[2], fill = cols[2]) +
-  geom_point(data = subset(matt_plot_nmds, treatment == "induced"), color = cols[1], fill = cols[1]) +
+  geom_encircle(data = subset(matt_plot_nmds, treatment == "healthy"), color = cols[1], fill = cols[1], alpha = 0.6, s_shape = 0.8) +
+  geom_encircle(data = subset(matt_plot_nmds, treatment == "induced"), color = cols[2], fill = cols[2], alpha = 0.6, s_shape = 0.8) +
+  geom_point(data = subset(matt_plot_nmds, treatment == "healthy"), color = cols[1], fill = cols[1]) +
+  geom_point(data = subset(matt_plot_nmds, treatment == "induced"), color = cols[2], fill = cols[2]) +
   xlim(-0.6, 0.7) +
   ylim(-0.5, 0.5) +
   theme_bw() +
@@ -195,11 +195,11 @@ write.csv(Summary_sub2, "Summary.csv", row.names = FALSE)
 
 #Traces#T18S1 and C18L1
 #T18S3 and C18L3 ok
-Comparison4 <- Data_PTRMS_outdoorx|> filter(Sample_ID == "T18S3"|Sample_ID == "C18L3")
+Comparison <- Data_PTRMS_outdoorx|> filter(Sample_ID == "T18S3"|Sample_ID == "C18L3")
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
 
 create_trace_plot <- function(variable) {
-  plot <- ggplot(Comparison4, aes(x = chrono, y = .data[[variable]], group = Sample_ID, colour = Sample_ID)) +
+  plot <- ggplot(Comparison, aes(x = chrono, y = .data[[variable]], group = Sample_ID, colour = Sample_ID)) +
     geom_line(linewidth = 1) +
     scale_x_continuous(expand = c(0, 0)) +
      scale_color_manual(values = c("green4", "red3"), labels = c("Healthy", "Induced")) +
@@ -217,3 +217,21 @@ create_trace_plot <- function(variable) {
   }
 
 Traces <- lapply(Variables, create_trace_plot)
+
+View(Comparison)
+plot <- ggplot(Comparison, aes(x = chrono, y = C8H8N., group = Sample_ID, colour = Sample_ID)) +
+    geom_line(linewidth = 1) +
+    scale_y_continuous(expand = c(0, 0),limits=c(0,120)) +
+    #scale_x_continuous(expand = c(0, 0),limits=c(0,120)) +
+     scale_color_manual(values = c("green4", "red3"), labels = c("Healthy", "Induced")) +
+    xlab("Time (s)") +
+    ylab("Ions/s") +
+    theme(
+      plot.title = element_text(size = 10),
+      axis.title = element_text(size = 10),
+      legend.title = element_blank(),
+      legend.text = element_text(size = 10),
+      legend.position="none"
+    )
+    plot
+  ggsave(paste0("Trace_C8H8N.pdf"), width = 5, height = 5, units = "cm", dpi = 600, scale = 2)
