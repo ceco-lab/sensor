@@ -93,7 +93,6 @@ matt_quant_x[matt_quant_x < 0] <- 0
 # Perform NMDS analysis
 nmds <- metaMDS(matt_quant_x, distance = "gower")
 
-
 # Prepare data for NMDS plot
 matt_plot_nmds <- vegan::scores(nmds)[1] %>% cbind(matt_quant_stat)
 matt_plot_nmds <- matt_plot_nmds[-40, ]
