@@ -13,8 +13,8 @@ setwd("./data")
 
 set.seed(6)
 
-#Variety="Delprim"
-Variety="Aventicum"
+Variety="Delprim"
+#Variety="Aventicum"
 
 if (Variety == "Delprim") {
   PTRMS <- read.csv("PTR_Lab_Delprim.csv", sep = ",") # Delprim data
@@ -63,7 +63,7 @@ sink()
 #Random forest 
 matt_90_x$treatment <- as.factor(matt_90_stat$treatment)
 sink(paste0("rf_PTR_",Variety,".txt"))  # Redirect output to a file
-rfPermute(treatment ~ ., data = matt_90_x, na.action = na.omit, ntree = 1000, num.rep = 150)
+rfPermute(treatment ~ ., data = matt_90_x, na.action = na.omit, ntree = 500, num.rep = 150)
 sink()  
 
 
