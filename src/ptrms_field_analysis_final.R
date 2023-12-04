@@ -106,14 +106,19 @@ nmds_plot <- ggplot(data = matt_plot_nmds, aes(x = sites.NMDS1, y = sites.NMDS2)
   geom_encircle(data = subset(matt_plot_nmds, treatment == "induced"), color = cols[2], fill = cols[2], alpha = 0.6, s_shape = 0.8) +
   geom_point(data = subset(matt_plot_nmds, treatment == "healthy"), color = cols[1], fill = cols[1]) +
   geom_point(data = subset(matt_plot_nmds, treatment == "induced"), color = cols[2], fill = cols[2]) +
-  xlim(-0.6, 0.7) +
-  ylim(-0.5, 0.5) +
+  xlim(-0.5, 0.5) +
+  ylim(-0.45, 0.45) +
+  coord_fixed(ratio = 1) +
   theme_bw() +
   scale_fill_manual(values = cols) +
   scale_color_manual(values = cols) +
-  annotate("text", x = -0.6, y = 0.5, label = paste0("stress: ", format(nmds$stress, digits = 4)), hjust = 0)
+    theme(legend.position="none",
+  aspect.ratio = 1)+
+  annotate("text", x = -0.5, y = 0.45, label = paste0("stress: ", format(nmds$stress, digits = 4)), hjust = 0)
 nmds_plot
-ggsave("NMDS.pdf",  dpi = 600)
+ggsave("NMDS.png",  dpi = 600)
+
+
 
 
 # PERMANOVA analysis
@@ -134,10 +139,6 @@ matt_quant_stat_rf$treatment <- as.factor(matt_quant_stat$treatment)
 sink("rp_output.txt")  
 rfPermute(treatment ~ ., data = matt_quant_stat_rf, na.action = na.omit, ntree = 1000, num.rep = 150)
 sink()  
-
-# Plot variable importance
-var_imp <- plotImportance(rp, scale = TRUE, size = 3)
-
 
 #Univariate analysis
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
@@ -192,8 +193,7 @@ Summary_sub2 <- do.call(rbind, Barplots)
 write.csv(Summary_sub2, "Summary.csv", row.names = FALSE)
 
 
-#Traces#T18S1 and C18L1
-#T18S3 and C18L3 ok
+# Trace plots
 Comparison <- Data_PTRMS_outdoorx|> filter(Sample_ID == "T18S3"|Sample_ID == "C18L3")
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
 
@@ -217,20 +217,3 @@ create_trace_plot <- function(variable) {
 
 Traces <- lapply(Variables, create_trace_plot)
 
-View(Comparison)
-plot <- ggplot(Comparison, aes(x = chrono, y = C8H8N., group = Sample_ID, colour = Sample_ID)) +
-    geom_line(linewidth = 1) +
-    scale_y_continuous(expand = c(0, 0),limits=c(0,120)) +
-    #scale_x_continuous(expand = c(0, 0),limits=c(0,120)) +
-     scale_color_manual(values = c("green4", "red3"), labels = c("Healthy", "Induced")) +
-    xlab("Time (s)") +
-    ylab("Ions/s") +
-    theme(
-      plot.title = element_text(size = 10),
-      axis.title = element_text(size = 10),
-      legend.title = element_blank(),
-      legend.text = element_text(size = 10),
-      legend.position="none"
-    )
-    plot
-  ggsave(paste0("Trace_C8H8N.pdf"), width = 5, height = 5, units = "cm", dpi = 600, scale = 2)
