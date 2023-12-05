@@ -12,7 +12,7 @@ setwd("./data")
 set.seed(6)
 
 # Load data
-Data_PTRMS_outdoor <- read.csv("Data_backgrounds.csv", sep = ",")
+Data_PTRMS_outdoor <- read.csv("PTR_Outdoor.csv", sep = ",")
 
 # Convert date to Date format and get unique dates
 vec_date <- as.Date(Data_PTRMS_outdoor$Date, format = "%m/%d/%y")
@@ -116,7 +116,7 @@ nmds_plot <- ggplot(data = matt_plot_nmds, aes(x = sites.NMDS1, y = sites.NMDS2)
   aspect.ratio = 1)+
   annotate("text", x = -0.5, y = 0.45, label = paste0("stress: ", format(nmds$stress, digits = 4)), hjust = 0)
 nmds_plot
-ggsave("NMDS.png",  dpi = 600)
+ggsave("NMDS.png", dpi = 600,height=12,width=12, units = "cm")
 
 
 
