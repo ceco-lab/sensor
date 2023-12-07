@@ -1,3 +1,4 @@
+# Load necessary libraries
 library(vegan)
 library(rfPermute)
 library(ggplot2)
@@ -9,88 +10,92 @@ library(broom)
 library(emmeans)
 library(multcomp)
 
+# Set working directory
 setwd("./data")
 
+# Set seed for reproducibility
 set.seed(6)
 
-Variety="Delprim"
-#Variety="Aventicum"
+# Specify the variety
+Variety <- "Aventicum" # Change to "Delprim" or "Aventicum" if needed
 
+# Read data based on variety
 if (Variety == "Delprim") {
   PTRMS <- read.csv("PTR_Lab_Delprim.csv", sep = ",") # Delprim data
 } else if (Variety == "Aventicum") {
   PTRMS <- read.csv("PTR_Lab_Aventicum.csv", sep = ",") # Aventicum data
 }
 
+# Extract unique sample IDs
 Sample_ID <- unique(PTRMS$Sample_ID)
-matt_90 <-   data.frame(aggregate(PTRMS[,3:38],
-                                  by = list(PTRMS$Sample_ID,PTRMS$treatment), 
-                                  FUN = function(x) quantile(x, probs = 0.9))) # function(x) quantile(x, probs = 0.95)
 
+# Calculate 90th percentile for each sample
+mat_90 <- data.frame(aggregate(PTRMS[, 3:38],
+  by = list(PTRMS$Sample_ID, PTRMS$treatment),
+  FUN = function(x) quantile(x, probs = 0.9)
+)) # function(x) quantile(x, probs = 0.95)
 
-matt_90_stat <- matt_90
-matt_90_stat$sample <- matt_90_stat$Group.1
-colnames(matt_90_stat)[2] <- "treatment"
+colnames(mat_90)[1] <- "sample"
+colnames(mat_90)[2] <- "treatment"
 
-matt_90_x  <-matt_90_stat[,3:(ncol(matt_90_stat)-1)]
-row.names(matt_90_x) <- matt_90_stat$sample
+# Keep only features
+mat_90_x <- mat_90[, 3:ncol(mat_90)]
+row.names(mat_90_x) <- mat_90$sample
 
+# NMDS
+cols <- c("#D8B70A", "darkgreen", "#972D15", "royalblue4")
 
-cols <-c("#D8B70A","darkgreen","#972D15","royalblue4")
+nmds <- metaMDS(mat_90_x, distance = "gower")
 
-nmds <- metaMDS(matt_90_x,distance="gower")
-
-nmds_plot <- vegan::scores(nmds)[1] %>%  
-  cbind(matt_90_stat) %>%
+nmds_plot <- vegan::scores(nmds)[1] %>%
+  cbind(mat_90) %>%
   ggplot(aes(x = sites.NMDS1, y = sites.NMDS2)) +
-  geom_encircle(aes(group = treatment, color = treatment, fill = treatment), alpha = 0.6, s_shape = 0.8,expand=0.03) +
+  geom_encircle(aes(group = treatment, color = treatment, fill = treatment), alpha = 0.6, s_shape = 0.8, expand = 0.03) +
   geom_point(aes(color = treatment)) +
   xlab(label = "NMDS1") +
   ylab(label = "NMDS2") +
-  annotate("text", x = -0.65, y = 0.21, label = paste0("stress: ", round(nmds$stress, digits = 4)), hjust = 0) +
-  xlim(-0.7,0.8) + ylim(-0.26,0.26) +
-  theme_bw() + scale_fill_manual(values=cols) + scale_color_manual(values=cols)  +
-  theme(legend.position="none")
-
+  annotate("text", x = -0.65, y = 0.21, label = paste0("stress: ", round(nmds$stress, digits = 3)), hjust = 0) +
+  xlim(-0.7, 0.8) +
+  ylim(-0.26, 0.26) +
+  theme_bw() +
+  scale_fill_manual(values = cols) +
+  scale_color_manual(values = cols) +
+  theme(legend.position = "none")
 nmds_plot
-ggsave(paste0("NMDS_PTRMS_", Variety, ".pdf"), dpi = 600)
+ggsave(paste0("NMDS_PTRMS_Lab", Variety, ".pdf"), dpi = 600)
 
-# PERMANOVA 
-sink(paste0("permanova_PTRMS_",Variety,".txt"))  # Redirect output to a file
-adonis2(matt_90_x ~ matt_90_stat$treatment, permutations = 999, method = "gower")
-sink()  
+# PERMANOVA
+sink(paste0("Permanova_PTRMS_Lab", Variety, ".txt"))
+adonis2(mat_90_x ~ mat_90$treatment, permutations = 999, method = "gower")
+sink()
 
-#Random forest 
-matt_90_x$treatment <- as.factor(matt_90_stat$treatment)
-sink(paste0("rf_PTR_",Variety,".txt"))  # Redirect output to a file
-rfPermute(treatment ~ ., data = matt_90_x, na.action = na.omit, ntree = 500, num.rep = 150)
-sink()  
+# Random forest
+mat_90_x$treatment <- as.factor(mat_90$treatment)
+sink(paste0("rf_PTR_Lab_", Variety, ".txt"))
+rfPermute(treatment ~ ., data = mat_90_x, na.action = na.omit, ntree = 500, num.rep = 150)
+sink()
 
+# ANOVAs and pairwise comparisons
 
+# Convert 'treatment' to a factor with specified levels
+mat_90$treatment <- factor(mat_90$treatment, levels = c("Control", "CG", "SE", "SF"))
 
+# Extracting the order of ions from the original "PTRMS" dataframe
+compound_order <- colnames(PTRMS)[3:ncol(PTRMS)]
 
-matt_90_stat$treatment <- factor(matt_90_stat$treatment, levels = c("Control", "CG", "SE", "SF"))
-
-
-
-# Extracting the order of compounds from the original "PTRMS" dataframe
-compound_order <- colnames(PTRMS)[-c(which(colnames(PTRMS) %in% c("Group.1", "sample", "treatment","Sample_ID")))]
-
-
-
-# Your existing code for data manipulation
-Summary <- matt_90_stat %>%
-    dplyr::select(-c(Group.1, sample)) %>%
-    pivot_longer(!c(treatment), names_to = "compounds", values_to = "value") %>%
-    group_by(treatment, compounds) %>%
-    summarise(mean = mean(value), stand.error = sd(value)/sqrt(n()))  # Using n() for simplicity
+# Get the mean and standard error for each ion by treatment
+Summary <- mat_90 %>%
+  dplyr::select(-c(sample)) %>%
+  pivot_longer(!c(treatment), names_to = "compounds", values_to = "value") %>%
+  group_by(treatment, compounds) %>%
+  summarise(mean = mean(value), stand.error = sd(value) / sqrt(n())) # Using n() for simplicity
 
 # Creating a cleaner summary
 Clean_Summary <- Summary %>%
   filter(treatment %in% c("Control", "CG", "SF", "SE")) %>%
   mutate(
-    mean = round(mean, 2),  # Round mean to 2 decimal places
-    stand.error = round(stand.error, 2)  # Round standard error to 2 decimal places
+    mean = round(mean, 2),
+    stand.error = round(stand.error, 2)
   ) %>%
   pivot_wider(names_from = "treatment", values_from = c("mean", "stand.error")) %>%
   arrange(match(compounds, compound_order)) %>%
@@ -111,18 +116,14 @@ Clean_Summary <- Summary %>%
   unite("SF", starts_with(c("mean_SF", "stand.error_SF")), sep = " ± ") %>%
   dplyr::select(compounds, Control, CG, SE, SF)
 
-
-
 # Initialize an empty data frame to store comp results
 comp_results_all <- data.frame(compounds = character(), Letters = character(), stringsAsFactors = FALSE)
 anova_results <- data.frame(compounds = character(), p.value = numeric(), statistic = numeric(), stringsAsFactors = FALSE)
 
-
-
 # Loop over each compound
 for (compound in compound_order) {
   # Create lm model
-  model <- lm(as.formula(paste(compound, " ~ treatment")),  data = matt_90_stat)
+  model <- lm(as.formula(paste(compound, " ~ treatment")), data = mat_90)
 
   # Perform ANOVA and extract p-value
   anova_result <- Anova(model, type = "II") %>%
@@ -130,14 +131,14 @@ for (compound in compound_order) {
     filter(term == "treatment") %>%
     dplyr::select(p.value, statistic) %>%
     mutate(compounds = compound)
-    anova_results <- bind_rows(anova_results, anova_result)
+  anova_results <- bind_rows(anova_results, anova_result)
 
   # Check if p-value is less than 0.05
   if (anova_result$p.value < 0.05) {
     # Compute emmeans and contrasts only if ANOVA p-value is significant
-    emmeans_result <- emmeans(model, ~ treatment)
-        # Use cld() to obtain letters with  correction
-    cld_result <- cld(emmeans_result, adjust="fdr",Letters = letters,sort=FALSE,reversed=FALSE)
+    emmeans_result <- emmeans(model, ~treatment)
+    # Use cld() to obtain letters with fdr correction
+    cld_result <- cld(emmeans_result, adjust = "fdr", Letters = letters, sort = FALSE, reversed = FALSE)
 
     # Extract letters and append to comp_results_all data frame
     Comp_letters <- data.frame(
@@ -147,9 +148,10 @@ for (compound in compound_order) {
     comp_results_all <- bind_rows(comp_results_all, Comp_letters)
   }
 }
-anova_results$p.value <- as.numeric(round((anova_results$p.value),3))
-anova_results$statistic <- as.numeric(round((anova_results$statistic),2))
 
+# Round p-values and statistics
+anova_results$p.value <- as.numeric(round((anova_results$p.value), 3))
+anova_results$statistic <- as.numeric(round((anova_results$statistic), 2))
 
 # Reshape comp_results_all to have three columns
 comp_results_all2 <- comp_results_all %>%
@@ -158,7 +160,7 @@ comp_results_all2 <- comp_results_all %>%
   pivot_wider(names_from = row_id, values_from = Letters) %>%
   ungroup()
 
-# Merge comp_results_all with Clean_Summary_all
+# Merge comp_results_all with Clean_Summary
 Clean_Summary_all <- left_join(Clean_Summary, comp_results_all2, by = "compounds") %>%
   mutate(
     Control = paste(Control, `1`),
@@ -167,28 +169,27 @@ Clean_Summary_all <- left_join(Clean_Summary, comp_results_all2, by = "compounds
     SF = paste(SF, `4`)
   ) %>%
   dplyr::select(-`1`, -`2`, -`3`, -`4`) %>%
-     mutate(
+  mutate(
     Control = str_replace(Control, "NA$", ""),
     CG = str_replace(CG, "NA$", ""),
     SE = str_replace(SE, "NA$", ""),
     SF = str_replace(SF, "NA$", "")
   )
 
-# Merge the anovCa_results with Clean_Summary
+# Merge the anova_results with Clean_Summary_all
 Clean_Summary_all2 <- left_join(Clean_Summary_all, anova_results, by = "compounds")
+
+# Format p-values
 Clean_Summary_all3 <- Clean_Summary_all2 %>%
   mutate(
     compounds = paste0(gsub("^X\\.|\\.\\.$", "", compounds), "+"),
     p.values = case_when(
       p.value < 0.001 ~ "< 0.001",
       p.value < 0.01 ~ "< 0.01",
-      TRUE ~ as.character(round(p.value, 3))  # Format other p-values to three decimal places
+      TRUE ~ as.character(round(p.value, 3)) # Format other p-values to three decimal places
     )
   ) %>%
-  dplyr::select(-p.value) 
+  dplyr::select(-p.value)
+
 # Writing the combined summary to Excel
-write.xlsx(Clean_Summary_all3, paste0("Table_PTR_Lab", Variety, ".xlsx"))
-
-
-
-
+write.xlsx(Clean_Summary_all3, paste0("Table_PTR_Lab_", Variety, ".xlsx"))
