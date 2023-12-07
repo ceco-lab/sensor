@@ -4,9 +4,6 @@ library(caret)
 library(ggplot2)
 library(dplyr)
 library(viridis)
-# library(ggalt)
-# library(readobj)
-
 
 # Set working directory
 setwd("./data")
@@ -15,7 +12,7 @@ setwd("./data")
 set.seed(6)
 
 # Load data
-Data_PTRMS_outdoor <- read.csv("Data_backgrounds.csv", sep = ",")
+Data_PTRMS_outdoor <- read.csv("PTR_Outdoor.csv", sep = ",")
 
 # Define combinations of measurement repetitions
 vec_comb <- c("all", "1", "2", "3", "1_2", "1_3", "2_3")
@@ -216,7 +213,7 @@ for (xx in c(1:length(vec_comb))) {
       data = as.matrix(train_data),
       label = train_label,
       max.depth = 5, eta = 0.05,
-      nthread = 10, nrounds = 1000,
+      nthread = 10, nrounds = 500,
       objective = "binary:logistic",
       print_every_n = 100
     )
@@ -247,7 +244,7 @@ for (xx in c(1:length(vec_comb))) {
 
   output_conf_mat[[xx]] <- confi
 }
-#####PLOTS
+##### PLOTS
 
 # Accuracy plot
 data_plot_conf <- NULL
@@ -278,7 +275,7 @@ accura_plot <- ggplot() +
   theme_classic() +
   scale_fill_viridis() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1))
-ggsave("accuracy.pdf",accura_plot)
+ggsave("accuracy.pdf", accura_plot)
 
 # Importance plot
 plot_imp_tot <- ggplot(plot_imp, aes(x = reorder(Feature, Importance), y = Importance, fill = Importance)) +
@@ -286,13 +283,11 @@ plot_imp_tot <- ggplot(plot_imp, aes(x = reorder(Feature, Importance), y = Impor
   theme_classic() +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-ggsave("Importance.pdf",plot_imp_tot)
+ggsave("Importance.pdf", plot_imp_tot)
 
 
 # Confusion matrix
 conf_table <- output_conf_mat[[1]]$table
 colnames(conf_table) <- c("healty", "induced")
 rownames(conf_table) <- c("healty", "induced")
-CM <- fourfoldplot(conf_table)
-ggsave("CM_plot.pdf", plot = CM)
-
+fourfoldplot(conf_table)

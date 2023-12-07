@@ -20,8 +20,7 @@ vec_date_unique <- unique(vec_date)
 
 # Get unique sample IDs
 Sample_ID <- unique(Data_PTRMS_outdoor$Sample_ID)
-
-
+colnames(Data_PTRMS_outdoor)
 # Initialize empty data frame
 Data_PTRMS_outdoorx <- NULL
 
@@ -46,25 +45,24 @@ for (j in c(1:length(vec_date_unique))) {
   # Ensure measurement time is 25 sec
   Data_PTRMS_outdoorx1 <- Data_PTRMS_outdoorx1[Data_PTRMS_outdoorx1$chrono < 26, ]
   # Calculate 90th percentile for each group
-  matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 8:35],
-
+  matt_quant <- data.frame(aggregate(Data_PTRMS_outdoorx1[, 8:ncol(Data_PTRMS_outdoorx1)],
     by = list(Data_PTRMS_outdoorx1$Treatment, Data_PTRMS_outdoorx1$Plant),
     FUN = function(x) quantile(x, probs = 0.9)
   ))
-  Data_PTRMS_outdoorx1$Plant
-  unique(matt_quant$Group.1)
+
   # Separate background data
   background <- matt_quant[matt_quant$Group.1 == "background", ]
-  background
   # Remove background data from main data
   matt_quant <- matt_quant[!(matt_quant$Group.1 == "background"), ]
 
   # Copy data for modification
   matt_quant2 <- matt_quant
   # Subtract background values
+
   for (i in c(3:ncol(matt_quant2))) {
     matt_quant2[, i] <- matt_quant2[, i] - background[nrow(background), i]
   }
+
   # Add date column
   date <- rep(j, nrow(matt_quant2))
   matt_quant2 <- data.frame(date, matt_quant2)
@@ -79,27 +77,30 @@ matt_quant_stat <- matt_quant_bck
 
 # Create a sample column
 matt_quant_stat$sample <- paste(matt_quant_stat$Group.1, matt_quant_stat$Group.2)
+
 # Rename the second column to "treatment"
 colnames(matt_quant_stat)[2] <- "treatment"
 
 # Select columns for NMDS and PERMANOVA analysis (all ion masses)
 matt_quant_x <- matt_quant_stat[, 4:(ncol(matt_quant_stat) - 1)]
+
 # Set row names as sample names
 row.names(matt_quant_x) <- matt_quant_stat$sample
+
 # Set negative values to zero
 matt_quant_x[matt_quant_x < 0] <- 0
-
 
 # Perform NMDS analysis
 nmds <- metaMDS(matt_quant_x, distance = "gower")
 
 # Prepare data for NMDS plot
 matt_plot_nmds <- vegan::scores(nmds)[1] %>% cbind(matt_quant_stat)
-matt_plot_nmds <- matt_plot_nmds[-40, ]
 
 # Plot NMDS
 cols <-c("darkgreen","#972D15")
-nmds_plot <- ggplot(data = matt_plot_nmds, aes(x = sites.NMDS1, y = sites.NMDS2)) +
+nmds_plot <- vegan::scores(nmds)[1] %>% 
+cbind(matt_quant_stat)%>%
+ggplot(aes(x = sites.NMDS1, y = sites.NMDS2)) +
   xlab(label = "NMDS1") +
   ylab(label = "NMDS2") +
   geom_encircle(data = subset(matt_plot_nmds, treatment == "healthy"), color = cols[1], fill = cols[1], alpha = 0.6, s_shape = 0.8) +
@@ -114,38 +115,33 @@ nmds_plot <- ggplot(data = matt_plot_nmds, aes(x = sites.NMDS1, y = sites.NMDS2)
   scale_color_manual(values = cols) +
     theme(legend.position="none",
   aspect.ratio = 1)+
-  annotate("text", x = -0.5, y = 0.45, label = paste0("stress: ", format(nmds$stress, digits = 4)), hjust = 0)
-nmds_plot
-ggsave("NMDS.png", dpi = 600,height=12,width=12, units = "cm")
-
-
-
+  annotate("text", x = -0.5, y = 0.45, label = paste0("stress: ", format(nmds$stress, digits = 3)), hjust = 0)
+ggsave("NMDS_PTR_outdoor.png", dpi = 600,height=12,width=12, units = "cm")
 
 # PERMANOVA analysis
-sink("permanova_output.txt")  # Redirect output to a file
+sink("permanova_PTR_outdoor.txt")  # Redirect output to a file
 adonis2(matt_quant_x ~ matt_quant_stat$treatment, permutations = 999, method = "gower")
 sink()  # Stop redirecting output
 
-
 #Random Forest analysis
-
-# Prepare data for Random Forest analysis
-# Select input variables
 matt_quant_stat_rf <- matt_quant_stat[, 4:(ncol(matt_quant_stat) - 1)]
-# Set treatment as output variable
 matt_quant_stat_rf$treatment <- as.factor(matt_quant_stat$treatment)
-
-# Perform Random Forest analysis with permutation test
-sink("rp_output.txt")  
-rfPermute(treatment ~ ., data = matt_quant_stat_rf, na.action = na.omit, ntree = 1000, num.rep = 150)
+sink("rf_PTR_outdoor.txt")  
+rfPermute(treatment ~ ., data = matt_quant_stat_rf, na.action = na.omit, ntree = 500, num.rep = 150)
 sink()  
 
 #Univariate analysis
+
+# Important variables selected
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
+
+# Create an empty data frame to store the summary data
 Summary_sub2 <- data.frame()
 
+# Define a function to plot barplots and calculate Wilcoxon test
 Univar <- function(variable) {
 
+  # Extract relevant columns, pivot the data, and calculate mean and standard error
   Summary_sub <- matt_quant_stat %>%
     select(treatment, !!sym(variable)) %>%
     pivot_longer(!c(treatment), names_to = "compounds", values_to = "value") %>%
@@ -153,12 +149,16 @@ Univar <- function(variable) {
     summarise(mean = mean(value), se = sd(value) / sqrt(n())) %>%
     as.data.frame()
 
+  # Subset data for the specified variable
   X <- Summary_sub %>% filter(compounds == variable)
+
+  # Perform Wilcoxon test
   sink(paste0("Wilcox", variable, ".txt"))  
   cat(paste0(variable, ": ", round((X[X$treatment == "induced", "mean"] - X[X$treatment == "healthy", "mean"]) / abs(X[X$treatment == "healthy", "mean"]) * 100, 0), "% increase\n"))
   print(wilcox.test(unlist(matt_quant_stat[, variable]) ~ treatment, data = matt_quant_stat))
   sink()
 
+# Plot barplots
   gg <- ggplot(X, aes(x = treatment, y = mean, fill = treatment)) +
     geom_bar(position = position_dodge(), color = "black", stat = "identity", linewidth = 0.25, width = 0.85) +
     geom_errorbar(position = position_dodge(0.9), aes(ymin = mean - se, ymax = mean + se),
@@ -183,20 +183,23 @@ Univar <- function(variable) {
       legend.position = "none"
     )
 
-  ggsave(paste0("Barplot_substracted", variable, ".pdf"), width = 4.25, height = 5, units = "cm", dpi = 600, scale = 2)
+  ggsave(paste0("Barplot_PTR_outdoor_", variable, ".pdf"), width = 4.25, height = 5, units = "cm", dpi = 600, scale = 2)
   return(Summary_sub)
 
 }
-
+# Apply the function to each variable
 Barplots <- lapply(Variables, Univar)
 Summary_sub2 <- do.call(rbind, Barplots) 
-write.csv(Summary_sub2, "Summary.csv", row.names = FALSE)
+write.csv(Summary_sub2, "Summary_PTR_outdoor.csv", row.names = FALSE)
 
 
 # Trace plots
+
+# Subset data for the specified sample IDs and variables
 Comparison <- Data_PTRMS_outdoorx|> filter(Sample_ID == "T18S3"|Sample_ID == "C18L3")
 Variables <- c("C8H8N.", "C6H11.", "C7H9.", "C11H19.")
 
+# Define a function to plot trace plots
 create_trace_plot <- function(variable) {
   plot <- ggplot(Comparison, aes(x = chrono, y = .data[[variable]], group = Sample_ID, colour = Sample_ID)) +
     geom_line(linewidth = 1) +
@@ -215,5 +218,6 @@ create_trace_plot <- function(variable) {
   ggsave(paste0("Trace_", variable, ".pdf"), width = 5, height = 5, units = "cm", dpi = 600, scale = 2)
   }
 
+# Apply the function to each variable
 Traces <- lapply(Variables, create_trace_plot)
 

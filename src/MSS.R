@@ -12,7 +12,7 @@ setwd("./data")
 set.seed(6)
 
 # Specify the variety
-Variety <- "Aventicum"  # Change to "Aventicum" or "Delprim" if needed
+Variety <- "Delprim"  # Change to "Aventicum" or "Delprim" if needed
 
 # Read data based on variety
 if (Variety == "Delprim") {
@@ -53,5 +53,5 @@ sink()
 #Random forest 
 MSS_x$treatment <- as.factor(MSS$treatment)
 sink(paste0("rf_MSS_",Variety,".txt"))  # Redirect output to a file
-rfPermute(treatment ~ ., data = MSS_x, na.action = na.omit, ntree = 1000, num.rep = 150)
+rfPermute(treatment ~ ., data = MSS_x, na.action = na.omit, ntree = 500, num.rep = 150)
 sink()  
