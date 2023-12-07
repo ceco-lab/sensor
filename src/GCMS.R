@@ -1,3 +1,4 @@
+# Load necessary libraries
 library(vegan)
 library(rfPermute)
 library(ggplot2)
@@ -9,23 +10,21 @@ library(broom)
 library(emmeans)
 library(multcomp)
 
-
+# Set working directory
 setwd("./data")
 
+# Set seed for reproducibility
 set.seed(6)
 
-#Select plant variety and load corresponding data 
+# Specify the variety
+Variety <- "Delprim"  # Change to "Aventicum" or "Delprim" if needed
 
-Variety="Delprim"
-#Variety="Aventicum"
-
+# Read data based on variety
 if (Variety == "Delprim") {
   GCMS <- read.csv("GCMS_Delprim.csv", sep = ",") # Delprim data
 } else if (Variety == "Aventicum") {
   GCMS <- read.csv("GCMS_Aventicum.csv", sep = ",") # Aventicum data
 }
-
-GCMS$treatment <- factor(GCMS$treatment, levels = c("Control", "CG", "SE", "SF"))
 
 #Keep only features
 GCMS_x <- GCMS[, 2:ncol(GCMS)]
@@ -41,14 +40,13 @@ nmds_plot <- vegan::scores(nmds)[1] %>%
   ylab(label = "NMDS2") +
   geom_encircle(aes(group = treatment, color = treatment, fill = treatment), alpha = 0.6, s_shape = 0.8,expand=0.03) +
   geom_point(aes(color = treatment)) +
-  annotate("text", x = -0.35, y = 0.3, label = paste0("stress: ", round(nmds$stress, digits = 4)), hjust = 0) +
+  annotate("text", x = -0.35, y = 0.3, label = paste0("stress: ", round(nmds$stress, digits = 3)), hjust = 0) +
   xlim(-0.4, 0.5) + ylim(-0.3, 0.3) +
     coord_fixed(ratio = 1) +
   theme_bw() + scale_fill_manual(values = cols) + scale_color_manual(values = cols)+
   theme(legend.position="none",
   axis.title=element_blank(),
   aspect.ratio = 1)
-
 nmds_plot
 ggsave(paste0("NMDS_GC_", Variety, ".pdf"), width=8, height=8,dpi = 600)
 
@@ -63,12 +61,16 @@ sink(paste0("rf_GC_",Variety,".txt"))  # Redirect output to a file
 rfPermute(treatment ~ ., data = GCMS_x, na.action = na.omit, ntree = 500, num.rep = 150)
 sink()  
 
+##ANOVAs and pairwise comparisons
 
-GCMS$total <- rowSums(GCMS[, !colnames(GCMS) %in% "treatment"])
+# Convert 'treatment' to a factor with specified levels
+GCMS$treatment <- factor(GCMS$treatment, levels = c("Control", "CG", "SE", "SF"))
 
-# Extracting the order of compounds from the original "PTRMS" dataframe
-compound_order <- colnames(GCMS)[-c(which(colnames(GCMS) %in% c( "treatment")))]
+# Extracting the order of ions from the original "PTRMS" dataframe
+GCMS$total <- rowSums(GCMS[,2:ncol(GCMS)])
+compound_order <- colnames(GCMS[,2:ncol(GCMS)])
 
+# Get the mean and standard error for each ion by treatment
 Summary <- GCMS %>%
     pivot_longer(!c(treatment), names_to = "compounds", values_to = "value") %>%
     group_by(treatment, compounds) %>%
@@ -100,12 +102,9 @@ Clean_Summary <- Summary %>%
   unite("SF", starts_with(c("mean_SF", "stand.error_SF")), sep = " ± ") %>%
   dplyr::select(compounds, Control, CG, SE, SF)
 
-
-
 # Initialize an empty data frame to store comp results
 comp_results_all <- data.frame(compounds = character(), Letters = character(), stringsAsFactors = FALSE)
 anova_results <- data.frame(compounds = character(), p.value = numeric(), statistic = numeric(), stringsAsFactors = FALSE)
-
 
 # Loop over each compound
 for (compound in compound_order) {
@@ -124,8 +123,8 @@ for (compound in compound_order) {
   if (anova_result$p.value < 0.05) {
     # Compute emmeans and contrasts only if ANOVA p-value is significant
     emmeans_result <- emmeans(model, ~ treatment)
-        # Use cld() to obtain letters with Bonferroni correction
-    cld_result <- cld(emmeans_result, adjust="bonferroni",Letters = letters,sort=FALSE,reversed=FALSE)
+        # Use cld() to obtain letters with fdr correction
+    cld_result <- cld(emmeans_result, adjust="fdr",Letters = letters,sort=FALSE,reversed=FALSE)
 
     # Extract letters and append to comp_results_all data frame
     Comp_letters <- data.frame(
@@ -136,6 +135,7 @@ for (compound in compound_order) {
   }
 }
 
+# Round p-values and statistics
 anova_results$p.value <- as.numeric(round((anova_results$p.value),3))
 anova_results$statistic <- as.numeric(round((anova_results$statistic),2))
 
@@ -146,7 +146,7 @@ comp_results_all2 <- comp_results_all %>%
   pivot_wider(names_from = row_id, values_from = Letters) %>%
   ungroup()
 
-# Merge comp_results_all with Clean_Summary_all
+# Merge comp_results_all with Clean_Summary
 Clean_Summary_all <- left_join(Clean_Summary, comp_results_all2, by = "compounds") %>%
   mutate(
     Control = paste(Control, `1`),
@@ -162,7 +162,7 @@ Clean_Summary_all <- left_join(Clean_Summary, comp_results_all2, by = "compounds
     SF = str_replace(SF, "NA$", "")
   )
 
-# Merge the anovCa_results with Clean_Summary
+# Merge the anova_results with Clean_Summary_all
 Clean_Summary_all2 <- left_join(Clean_Summary_all, anova_results, by = "compounds")
 Clean_Summary_all3 <- Clean_Summary_all2 %>%
   mutate(
@@ -174,8 +174,9 @@ Clean_Summary_all3 <- Clean_Summary_all2 %>%
     )
   ) %>%
   dplyr::select(-p.value) 
+
 # Writing the combined summary to Excel
-write.xlsx(Clean_Summary_all3, paste0("Table_GC_lm", Variety, ".xlsx"))
+write.xlsx(Clean_Summary_all3, paste0("Table_GC_", Variety, ".xlsx"))
 
 
 
