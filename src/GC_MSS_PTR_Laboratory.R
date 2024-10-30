@@ -133,8 +133,8 @@ Summary <- Data %>%
 Clean_Summary <- Summary %>%
   filter(Treatment %in% c("Control", "C. graminicola", "S. exigua", "S. frugiperda")) %>%
   mutate(
-    mean = ifelse(mean<0.01,format(mean, scientific = TRUE,digits = 3),round(mean,2)), 
-    stand.error = ifelse(stand.error<0.01,format(stand.error, scientific = TRUE,digits = 2),round(stand.error,2))) %>% 
+    mean = ifelse(mean<0.01,format(mean, scientific = TRUE,digits = 3),round(mean,3)), 
+    stand.error = ifelse(stand.error<0.01,format(stand.error, scientific = TRUE,digits = 3),round(stand.error,3))) %>% 
   pivot_wider(names_from = "Treatment", values_from = c("mean", "stand.error")) %>%
   arrange(match(compounds, compound_order)) %>%
   unite("Control", starts_with(c("mean_Control", "stand.error_Control")), sep = " ± ") %>%
