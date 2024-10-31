@@ -1,24 +1,28 @@
+#contact: marine.mamin@gmail.com
+
 # Load necessary libraries
 library(tidyverse)
 library(readxl)
 library(writexl)
 
 # Set working directory
-#setwd("./data")
+setwd("./data")
 
 #Load data
-Data60 <- read_excel("PTR_Outdoors.xlsx")
+Data1 <- read_excel("PTR_Outdoors.xlsx")
 
 #Prepare data--------
 
-#Average of the 60-second measurements
-Data <- Data60 %>%
+#Ensure 60 first seconds of measurements are kept and take the average
+Data <- Data1 %>%
+  group_by(Sample_ID) %>%
+  slice_head(n = 60) %>%  
+  ungroup() %>%
   mutate(across(where(is.character), as.factor),
-         Plant = as.factor(Plant)) %>% 
-  group_by(Sample_ID, Treatment, Distance, Day,Plant) %>%
-  summarize(across(C3H5O:C15H27O, mean)) %>%
-  as.data.frame()%>%
-    ungroup()
+         Plant = as.factor(Plant)) %>%
+  group_by(Sample_ID, Treatment, Distance, Day, Plant) %>%
+  summarize(across(C3H5O:C15H27O, mean), .groups = "drop") %>%  # Calculate the mean across specified columns
+  as.data.frame()
 
 #Summary and Wilcoxon tests-----
 
@@ -47,8 +51,7 @@ Clean_Summary1 <- Summary1 %>%
   pivot_wider(names_from = "combi", values_from = c("mean", "mean_num", "stand.error"))%>%
   mutate(
   Percentage_increase_12cm = paste0(round(((mean_num_Damaged_12cm - mean_num_Control_12cm)/mean_num_Control_12cm) * 100), "%"),
-  Percentage_increase_45cm = paste0(round(((mean_num_Damaged_45cm- mean_num_Control_45cm)/mean_num_Control_45cm) * 100), "%"))
-%>% 
+  Percentage_increase_45cm = paste0(round(((mean_num_Damaged_45cm- mean_num_Control_45cm)/mean_num_Control_45cm) * 100), "%"))%>% 
   dplyr::select(-contains("mean_num")) %>% 
   unite("Damaged_12cm_mean", c("mean_Damaged_12cm", "stand.error_Damaged_12cm"), sep = " ± ")%>%
   unite("Damaged_45cm_mean", c("mean_Damaged_45cm", "stand.error_Damaged_45cm"), sep = " ± ") %>%
